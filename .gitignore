@@ -41,5 +41,7 @@ out/
 *.yaml
 application.yml
 
+*.env
+
 ### macOS ###
 .DS_Store
