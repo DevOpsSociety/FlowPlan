@@ -33,17 +33,17 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    // Actuator (Health Check)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-//    // HTTP Client (AI 서비스 호출용)
-//    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
-//    implementation 'org.apache.httpcomponents.core5:httpcore5:5.2.1'
+    // Google ID Token 검증
+    implementation 'com.google.api-client:google-api-client:2.6.0'
+    implementation 'com.google.http-client:google-http-client-jackson2:1.43.3'
 
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // OpenAPI / Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
