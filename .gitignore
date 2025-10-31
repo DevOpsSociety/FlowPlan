@@ -1,0 +1,44 @@
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+
+# Python (FlowPlanAI)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# Java/Kotlin (FlowPlanServer)
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+.gradle/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# 데이터베이스 볼륨
+postgres-data/
+
