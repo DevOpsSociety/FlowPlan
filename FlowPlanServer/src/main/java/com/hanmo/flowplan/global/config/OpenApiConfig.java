@@ -18,9 +18,6 @@ public class OpenApiConfig {
     @Value("${spring.application.name:FlowPlan}")
     private String appName;
 
-    @Value("${springdoc.server-url:http://localhost:8080}")
-    private String serverUrl;
-
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "bearerAuth";
@@ -30,7 +27,7 @@ public class OpenApiConfig {
                         .title(appName + " API")
                         .version("v1")
                         .description("FlowPlanServer - API 문서 (Swagger / OpenAPI)"))
-                .servers(List.of(new Server().url(serverUrl)))
+                .servers(List.of(new Server().url("/")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
