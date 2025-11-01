@@ -12,39 +12,50 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
-                .cors(Customizer.withDefaults())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // OAuth2 관련 경로는 공개
-                        .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
-                        // OpenAPI / Swagger UI 허용
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs/**",
-                                "/webjars/**",
-                                "/swagger-resources/**",
-                                "/swagger-ui/index.html"
-                        ).permitAll()
-                        // actuator 헬스체크(선택)
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // 나머지 요청은 인증 필요
-                        .anyRequest().authenticated()
-                );
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+      http
+              .csrf(csrf -> csrf.disable())
+              .formLogin(form -> form.disable())
+              .httpBasic(basic -> basic.disable())
+              .cors(Customizer.withDefaults())
+              .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+              .authorizeHttpRequests(auth -> auth
+                      // OAuth2 관련 경로는 공개
+                      .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
+                      // OpenAPI / Swagger UI 허용
+                      .requestMatchers(
+                              "/swagger-ui.html",
+                              "/swagger-ui/**",
+                              "/v3/api-docs",
+                              "/v3/api-docs/**",
+                              "/webjars/**",
+                              "/swagger-resources/**",
+                              "/swagger-ui/index.html"
+                      ).permitAll()
+                      // 나머지 요청은 인증 필요
+                      .anyRequest().authenticated()
+              );
 
-        // OAuth2 설정은 나중 단계에서 아래 블록을 추가
-        // .oauth2Login(oauth -> oauth
-        //     .userInfoEndpoint(u -> u.userService(oAuthUserService))
-        //     .successHandler(oAuthSuccessHandler)
-        // );
+      // OAuth2 설정은 나중 단계에서 아래 블록을 추가
+      // .oauth2Login(oauth -> oauth
+      //     .userInfoEndpoint(u -> u.userService(oAuthUserService))
+      //     .successHandler(oAuthSuccessHandler)
+      // );
+      return http.build();
+  }
 
-        return http.build();
-    }
+  @Bean
+  public WebSecurityCustomizer webSecurityCustomizer() {
+    return (web) -> web.ignoring()
+        .requestMatchers(
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/actuator/health",
+            "/actuator/info"
+        );
+  }
+
+
 }
