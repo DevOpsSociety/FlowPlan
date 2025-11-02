@@ -9,7 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Configuration
+@Configura
 @EnableWebSecurity
 public class SecurityConfig {
 
@@ -24,16 +24,6 @@ public class SecurityConfig {
               .authorizeHttpRequests(auth -> auth
                       // OAuth2 관련 경로는 공개
                       .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
-                      // OpenAPI / Swagger UI 허용
-                      .requestMatchers(
-                              "/swagger-ui.html",
-                              "/swagger-ui/**",
-                              "/v3/api-docs",
-                              "/v3/api-docs/**",
-                              "/webjars/**",
-                              "/swagger-resources/**",
-                              "/swagger-ui/index.html"
-                      ).permitAll()
                       // 나머지 요청은 인증 필요
                       .anyRequest().authenticated()
               );
@@ -53,8 +43,8 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/actuator/health",
-            "/actuator/info"
+            "/v3/api-docs",
+            "/actuator/**
         );
   }
 
