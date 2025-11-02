@@ -7,12 +7,12 @@ import asyncio
 
 class GeminiService:
     """Google Gemini API 서비스"""
-    
+
     def __init__(self):
         """Gemini API 초기화"""
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self.model_name = settings.GEMINI_MODEL
-    
+
     async def generate_markdown_spec(self, project_data: Dict[str, Any]) -> str:
         """
         프로젝트 정보를 마크다운 명세서로 변환
@@ -26,7 +26,7 @@ class GeminiService:
         prompt = self._build_markdown_prompt(project_data)
         response = await self._generate_content(prompt)
         return response
-    
+
     async def generate_wbs_from_markdown(self, markdown_spec: str) -> str:
         """
         마크다운 명세서를 기반으로 WBS 생성
@@ -40,7 +40,7 @@ class GeminiService:
         prompt = self._build_wbs_from_markdown_prompt(markdown_spec)
         response = await self._generate_content(prompt)
         return response
-    
+
     async def generate_wbs_structure(self, project_data: Dict[str, Any]) -> str:
         """
         프로젝트 정보를 기반으로 WBS 구조를 생성합니다.
@@ -52,20 +52,20 @@ class GeminiService:
             JSON 형식의 WBS 구조 문자열
         """
         prompt = self._build_wbs_prompt(project_data)
-        
+
         response = await self._generate_content(prompt)
         return response
-    
+
     def _build_wbs_prompt(self, data: Dict[str, Any]) -> str:
         """WBS 생성을 위한 프롬프트 구성"""
         
-        # 날짜 정보 포맷팅
+        # ... (이 메서드의 다른 부분은 동일) ...
+        
         date_info = ""
         if data.get('start_date') and data.get('end_date'):
             date_info = f"- 시작일: {data['start_date']}\n- 마감일: {data['end_date']}\n"
         date_info += f"- 전체 기간: {data['total_days']}일"
         
-        # 추가 정보 섹션 구성
         additional_info = []
         if data.get('budget'):
             additional_info.append(f"- 예산: {data['budget']}")
@@ -80,7 +80,6 @@ class GeminiService:
         
         additional_section = "\n".join(additional_info) if additional_info else ""
         
-        # 상세 요구사항 섹션
         requirements_info = []
         if data.get('project_purpose'):
             requirements_info.append(f"- 프로젝트 목적: {data['project_purpose']}")
@@ -93,12 +92,10 @@ class GeminiService:
         
         requirements_section = "\n".join(requirements_info) if requirements_info else ""
         
-        # 추가 정보 섹션 포맷팅
         additional_block = ""
         if additional_section:
             additional_block = f"\n## 💰 추가 정보\n{additional_section}\n"
         
-        # 요구사항 섹션 포맷팅
         requirements_block = ""
         if requirements_section:
             requirements_block = f"\n## 🎯 요구사항\n{requirements_section}\n"
@@ -129,6 +126,8 @@ class GeminiService:
 - status는 항상 "할일"
 - parent_id는 상위 작업의 task_id (최상위는 null)
 - dependencies 필드는 사용하지 않음
+# [수정됨] duration_days는 반드시 정수여야 한다는 규칙 추가
+- 'duration_days'(일수) 필드는 **반드시 1, 2, 3과 같은 정수(integer)여야 하며,** 절대로 0.5, 0.2와 같은 소수점(float)을 사용하면 안 됩니다.
 
 {{
   "project_name": "프로젝트명",
@@ -166,11 +165,12 @@ class GeminiService:
 JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명은 포함하지 마세요.
 """
         return prompt
-    
+
     def _build_markdown_prompt(self, data: Dict[str, Any]) -> str:
         """마크다운 명세서 생성 프롬프트"""
         
-        # 날짜 정보
+        # ... (이 메서드는 WBS JSON을 만들지 않으므로 수정할 필요 없음) ...
+        
         date_info = ""
         if data.get('start_date') and data.get('end_date'):
             date_info = f"- **기간**: {data['start_date']} ~ {data['end_date']} ({data['total_days']}일)\n"
@@ -244,7 +244,7 @@ JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명
 마크다운 형식만 출력하고, 코드 블록 마커나 다른 설명은 포함하지 마세요.
 """
         return prompt
-    
+
     def _build_wbs_from_markdown_prompt(self, markdown_spec: str) -> str:
         """마크다운 명세서로부터 WBS 생성 프롬프트"""
         
@@ -273,6 +273,8 @@ JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명
 - status는 항상 "할일" (초기 생성 시)
 - parent_id는 상위 작업의 task_id (최상위 작업은 null)
 - dependencies 필드는 사용하지 않음
+# [수정됨] duration_days는 반드시 정수여야 한다는 규칙 추가
+- 'duration_days'(일수) 필드는 **반드시 1, 2, 3과 같은 정수(integer)여야 하며,** 절대로 0.5, 0.2와 같은 소수점(float)을 사용하면 안 됩니다.
 
 {{
   "project_name": "프로젝트명",
@@ -310,7 +312,7 @@ JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명
 JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명은 포함하지 마세요.
 """
         return prompt
-    
+
     async def _generate_content(self, prompt: str) -> str:
         """
         Gemini API를 호출하여 컨텐츠 생성
