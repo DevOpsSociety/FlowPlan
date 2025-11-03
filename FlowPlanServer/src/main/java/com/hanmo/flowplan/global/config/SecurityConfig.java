@@ -24,6 +24,12 @@ public class SecurityConfig {
               .authorizeHttpRequests(auth -> auth
                       // OAuth2 관련 경로는 공개
                       .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
+                      .requestMatchers(
+                          "/swagger-ui.html",
+                          "/swagger-ui/**",
+                          "/v3/api-docs/**",
+                          "/actuator/**"
+                      ).permitAll()
                       // 나머지 요청은 인증 필요
                       .anyRequest().authenticated()
               );
@@ -34,17 +40,6 @@ public class SecurityConfig {
       //     .successHandler(oAuthSuccessHandler)
       // );
       return http.build();
-  }
-
-  @Bean
-  public WebSecurityCustomizer webSecurityCustomizer() {
-    return (web) -> web.ignoring()
-        .requestMatchers(
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/actuator/**"
-        );
   }
 
 
