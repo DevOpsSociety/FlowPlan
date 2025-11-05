@@ -1,0 +1,17 @@
+name: FlowPlan CD
+
+on:
+  push:
+    branches: [ main ] # 'main' 브랜치에 PUSH될 때만 실행
+
+jobs:
+  deploy:
+    runs-on: self-hosted # EC2에 설치한 러너에서 실행
+
+    steps:
+    - name: 1. 최신 코드로 업데이트 (Git Pull)
+      run: cd ~/FlowPlan && git pull origin main
+
+    - name: 2. 도커 컴포즈 재시작 (CD)
+      # 하이픈이 없는 'docker compose' 명령어 사용
+      run: cd ~/FlowPlan && docker compose up --build -d
