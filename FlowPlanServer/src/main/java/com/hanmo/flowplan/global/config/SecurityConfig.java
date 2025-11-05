@@ -23,8 +23,8 @@ public class SecurityConfig {
               .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
               .authorizeHttpRequests(auth -> auth
                       // OAuth2 관련 경로는 공개
-                      .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
                       .requestMatchers(
+                          "/api/auth/google/login",
                           "/swagger-ui.html",
                           "/swagger-ui/**",
                           "/v3/api-docs/**",
