@@ -32,7 +32,7 @@ public class GoogleOAuthService {
                 User.builder()
                         .googleId(info.userId())
                         .email(info.email())
-                        .name(extractNameFromEmail(info.email()))
+                        .name(info.name())
                         .build()
         ));
 

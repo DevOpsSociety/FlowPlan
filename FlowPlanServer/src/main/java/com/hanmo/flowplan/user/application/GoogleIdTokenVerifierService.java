@@ -30,8 +30,9 @@ public class GoogleIdTokenVerifierService {
             GoogleIdToken.Payload payload = idToken.getPayload();
             String sub = payload.getSubject(); // googleId
             String email = payload.getEmail();
+            String name  = (String) payload.get("name");
 
-            return new GoogleUserInfo(sub, email);
+            return new GoogleUserInfo(sub, email, name);
         } catch (Exception e) {
             throw new IllegalStateException("Google ID Token 검증 실패", e);
         }
