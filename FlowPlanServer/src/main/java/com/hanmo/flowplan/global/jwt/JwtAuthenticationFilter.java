@@ -26,7 +26,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // 1. Request Header에서 Access Token 추출
     String at = jwtProvider.resolveAccessToken(request);
-
     // 2. 토큰이 유효한지 검증
     if (at != null) {
       try {

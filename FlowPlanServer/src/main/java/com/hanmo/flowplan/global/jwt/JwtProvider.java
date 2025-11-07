@@ -106,7 +106,7 @@ public class JwtProvider {
 
   public Authentication getAuthentication(String token) {
     String googleId = getGoogleIdFromToken(token);
-    User user = userRepository.findByEmail(googleId)
+    User user = userRepository.findByGoogleId(googleId)
         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
     Collection<GrantedAuthority> auths = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
 

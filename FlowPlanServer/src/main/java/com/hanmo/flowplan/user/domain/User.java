@@ -26,6 +26,7 @@ public class User extends BaseTimeEntity {
     private String googleId;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private UserRole role;
 
     @Builder

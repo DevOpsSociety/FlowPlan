@@ -66,8 +66,8 @@ public class GoogleOAuthService {
     // 로그아웃 (AT 무효화는 보통 블랙리스트 or 만료 대기. 여기선 RT 삭제만)
     public void logout(String accessToken) {
         if (accessToken == null) return;
-        String email = jwtProvider.getGoogleIdFromToken(accessToken);
-        refreshTokenStore.delete(email);
+        String googleId = jwtProvider.getGoogleIdFromToken(accessToken);
+        refreshTokenStore.delete(googleId);
         // TODO: 필요 시 AccessToken 블랙리스트 처리
     }
 }
