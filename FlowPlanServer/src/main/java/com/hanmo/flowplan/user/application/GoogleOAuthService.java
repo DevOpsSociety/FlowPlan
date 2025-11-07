@@ -36,7 +36,7 @@ public class GoogleOAuthService {
                         .build()
         ));
 
-        JwtToken jwt = jwtProvider.issueToken(user.getEmail());
+        JwtToken jwt = jwtProvider.issueToken(user.getGoogleId());
         refreshTokenStore.save(user.getEmail(), jwt.refreshToken());
 
         return new AuthResult(user.getId(), user.getEmail(), user.getName(), isNew, jwt);
@@ -51,7 +51,7 @@ public class GoogleOAuthService {
     // 재발급
     public JwtToken reissueTokens(String refreshToken) {
         jwtProvider.assertRefreshToken(refreshToken);
-        String email = jwtProvider.getUsernameFromToken(refreshToken);
+        String email = jwtProvider.getGoogleIdFromToken(refreshToken);
 
         String stored = refreshTokenStore.get(email);
         if (stored == null || !stored.equals(refreshToken)) {
@@ -66,8 +66,8 @@ public class GoogleOAuthService {
     // 로그아웃 (AT 무효화는 보통 블랙리스트 or 만료 대기. 여기선 RT 삭제만)
     public void logout(String accessToken) {
         if (accessToken == null) return;
-        String email = jwtProvider.getUsernameFromToken(accessToken);
-        refreshTokenStore.delete(email);
+        String googleId = jwtProvider.getGoogleIdFromToken(accessToken);
+        refreshTokenStore.delete(googleId);
         // TODO: 필요 시 AccessToken 블랙리스트 처리
     }
 }

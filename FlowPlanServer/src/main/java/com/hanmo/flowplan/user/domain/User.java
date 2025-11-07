@@ -25,10 +25,15 @@ public class User extends BaseTimeEntity {
     @Column(name = "google_id", nullable = false)
     private String googleId;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
+
     @Builder
     public User(String email, String name, String googleId) {
         this.email = email;
         this.name = name;
         this.googleId = googleId;
+        this.role = UserRole.USER; // 기본 역할 설정
     }
 }
