@@ -2,12 +2,13 @@ package com.hanmo.flowplan.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+
 
 @Configuration
 @EnableWebSecurity
@@ -22,6 +23,7 @@ public class SecurityConfig {
               .cors(Customizer.withDefaults())
               .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
               .authorizeHttpRequests(auth -> auth
+                      .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                       // OAuth2 관련 경로는 공개
                       .requestMatchers(
                           "/api/swagger-ui/index.html",
