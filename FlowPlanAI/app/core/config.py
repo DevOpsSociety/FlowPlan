@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     
-    # Google Gemini
-    GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.0-flash-exp"  # 최신 모델 (새로운 SDK 사용)
+    # Groq AI
+    GROQ_API_KEY: str
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"  # Groq의 최신 고성능 모델
     
     class Config:
         env_file = ".env"
