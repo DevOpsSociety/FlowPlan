@@ -1,4 +1,4 @@
-package com.hanmo.flowplan.ai.appilcation;
+package com.hanmo.flowplan.ai.application;
 
 
 import com.hanmo.flowplan.ai.infrastructure.dto.AiSpecRequestDto;

@@ -1,8 +1,7 @@
 package com.hanmo.flowplan.user.domain;
 
 import com.hanmo.flowplan.global.common.BaseTimeEntity;
-import com.hanmo.flowplan.project.domain.Project;
-import com.hanmo.flowplan.project.domain.ProjectMember;
+import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.task.domain.Task;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -39,6 +38,9 @@ public class User extends BaseTimeEntity {
 
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ProjectMember> projectMembers = new ArrayList<>();
+
+  @OneToMany(mappedBy = "assignee", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Task> tasks = new ArrayList<>();
 
 
   @Builder

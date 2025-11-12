@@ -1,6 +1,6 @@
 package com.hanmo.flowplan.ai.infrastructure;
 
-import com.hanmo.flowplan.ai.appilcation.AiClient;
+import com.hanmo.flowplan.ai.application.AiClient;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiSpecRequestDto;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiSpecResponseDto;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsRequestDto;

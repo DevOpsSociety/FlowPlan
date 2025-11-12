@@ -11,9 +11,6 @@ public record AiWbsResponseDto(
     @JsonProperty("total_tasks")
     int totalTasks,
 
-    @JsonProperty("total_duration_days")
-    int totalDurationDays,
-
     List<TaskDto> tasks // ⭐️ Task 목록
 ) {
   // ⭐️ Flat WBS Task 1개 항목

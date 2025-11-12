@@ -9,16 +9,19 @@ public record AiSpecRequestDto(
     String projectName,
 
     @JsonProperty("project_type")
-    String description,
+    String projectType,
 
     @JsonProperty("team_size")
     int teamSize,
 
     @JsonProperty("expected_duration_days")
-    int durationMonths,
+    int expectedDurationDays,
 
-    @JsonProperty("project_duration")
-    ProjectDurationDto projectDuration,
+    @JsonProperty("start_date")
+    String startDate,
+
+    @JsonProperty("end_date")
+    String endDate,
 
     String budget,
     String priority,
@@ -26,22 +29,6 @@ public record AiSpecRequestDto(
     List<String> deliverables,
     List<String> risks,
 
-    @JsonProperty("project_purpose")
-    String projectPurpose,
-
-    @JsonProperty("key_features")
-    List<String> keyFeatures,
-
     @JsonProperty("detailed_requirements")
-    String detailedRequirements,
-
-    String constraints
-) {
-  public record ProjectDurationDto(
-      @JsonProperty("start_date")
-      String startDate,
-
-      @JsonProperty("end_date")
-      String endDate
-  ) {}
-}
+    String detailedRequirements
+) {}
