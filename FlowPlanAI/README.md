@@ -4,11 +4,11 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-green.svg)](https://fastapi.tiangolo.com/)
-[![Google Gemini](https://img.shields.io/badge/Google-Gemini%20AI-orange.svg)](https://ai.google.dev/)
+[![Groq](https://img.shields.io/badge/Groq-AI-blue.svg)](https://console.groq.com/)
 
 ## 개요
 
-FlowPlanAI는 프로젝트 정보를 입력받아 **Google Gemini AI**를 활용하여 작업 분해 구조(WBS)를 자동으로 생성하는 FastAPI 기반 백엔드 서비스입니다.
+FlowPlanAI는 프로젝트 정보를 입력받아 **Groq AI**를 활용하여 작업 분해 구조(WBS)를 자동으로 생성하는 FastAPI 기반 백엔드 서비스입니다.
 
 ### 주요 특징
 
@@ -25,8 +25,8 @@ FlowPlanAI는 프로젝트 정보를 입력받아 **Google Gemini AI**를 활용
 | **Backend** | Python | 3.11+ | 메인 언어 |
 | | FastAPI | 0.109.0 | 웹 프레임워크 |
 | | Uvicorn | 0.27.0 | ASGI 서버 |
-| **AI** | Google Gemini | gemini-2.0-flash-exp | WBS 생성 AI 모델 |
-| | google-genai | 0.3.0 | Gemini API SDK |
+| **AI** | Groq | llama-3.3-70b-versatile | WBS 생성 AI 모델 (Groq) |
+| | groq | latest | Groq Python SDK |
 | **데이터 검증** | Pydantic | 2.5.3 | 요청/응답 검증 |
 | | pydantic-settings | 2.1.0 | 환경 변수 관리 |
 | **환경 설정** | python-dotenv | 1.0.0 | .env 파일 로드 |
@@ -57,7 +57,7 @@ FlowPlanAI/
 │   │   └── routes/
 │   │       └── wbs.py             # WBS API 엔드포인트 (3개: generate-spec, generate-from-spec, generate-from-spec/flat)
 │   ├── services/                  # 비즈니스 로직
-│   │   ├── gemini_service.py      # Gemini API 통합 (프롬프트 엔지니어링)
+│   │   ├── gemini_service.py      # Groq API 통합 (프롬프트 엔지니어링)
 │   │   ├── wbs_generator.py       # 직접 WBS 생성
 │   │   ├── markdown_generator.py  # 마크다운 명세서 생성
 │   │   └── wbs_from_markdown.py   # 명세서 기반 WBS 생성
@@ -68,7 +68,7 @@ FlowPlanAI/
 │   ├── utils/                     # 유틸리티 함수
 │   │   └── wbs_converter.py       # 계층 → Flat 구조 변환
 │   └── core/
-│       └── config.py              # 환경 변수 관리 (GEMINI_API_KEY)
+│       └── config.py              # 환경 변수 관리 (GROQ_API_KEY)
 ├── .env                           # 환경 변수 (API 키)
 ├── .env.example                   # 환경 변수 템플릿
 ├── requirements.txt               # Python 의존성
@@ -95,7 +95,7 @@ FlowPlanAI/
 └──────────────┬──────────────────────────┘
                ↓
 ┌─────────────────────────────────────────┐
-│  External API (Google Gemini)           │
+│  External API (Groq)                    │
 │  - WBS/명세서 생성 (AI)                  │
 └──────────────┬──────────────────────────┘
                ↓
@@ -127,7 +127,7 @@ pip install -r requirements.txt
 
 # 4. 환경 변수 설정
 cp .env.example .env
-# .env 파일 편집 후 GEMINI_API_KEY 추가
+# .env 파일 편집 후 GROQ_API_KEY 추가
 ```
 
 #### Linux/macOS
@@ -143,18 +143,17 @@ pip install -r requirements.txt
 
 # 4. 환경 변수 설정
 cp .env.example .env
-# .env 파일 편집 후 GEMINI_API_KEY 추가
+# .env 파일 편집 후 GROQ_API_KEY 추가
 ```
 
 ### 2. API 키 발급
 
-1. [Google AI Studio](https://aistudio.google.com/app/apikey) 접속
-2. **Get API Key** 클릭
-3. API 키 복사
-4. `.env` 파일에 추가:
-   ```env
-   GEMINI_API_KEY=your_actual_api_key_here
-   ```
+1. Groq 콘솔에서 API 키 발급: https://console.groq.com/keys
+2. 새 키를 생성하고 복사합니다.
+3. `.env` 파일에 추가:
+  ```env
+  GROQ_API_KEY=your_actual_groq_api_key_here
+  ```
 
 ### 3. 서버 실행
 
