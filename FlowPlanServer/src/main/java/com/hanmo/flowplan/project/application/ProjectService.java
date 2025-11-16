@@ -34,18 +34,17 @@ public class ProjectService {
   private final TaskService taskService;   // (WBS 저장 담당)
 
   @Transactional
-  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String token) {
+  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String googleId) {
 
-    String googleId = jwtProvider.getGoogleIdFromToken(token);
     User owner = userRepository.findByGoogleId(googleId)
         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
 
     // 1. (Project 저장)
-    Project savedProject = projectRepository.save(Project.createProject(createProjectRequest));
+    Project savedProject = projectRepository.save(Project.createProject(owner, createProjectRequest));
 
     // 프로젝트와 소유자 연결 저장
     ProjectMember projectMember = ProjectMember.builder()
-        .user(owner)
+        .user(savedProject.getOwner())
         .project(savedProject)
         .build();
 
@@ -66,9 +65,7 @@ public class ProjectService {
 
 
   @Transactional
-  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String token) {
-
-    String googleId = jwtProvider.getGoogleIdFromToken(token);
+  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String googleId) {
 
     User user = userRepository.findByGoogleId(googleId)
         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));

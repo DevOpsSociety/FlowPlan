@@ -95,7 +95,7 @@ public class JwtProvider {
   }
 
   public String getGoogleIdFromToken(String token) {
-      return parseClaims(token).get("googleId", String.class);
+    return parseClaims(token).get("googleId", String.class);
   }
 
   public String resolveAccessToken(HttpServletRequest request) {
@@ -108,9 +108,13 @@ public class JwtProvider {
     String googleId = getGoogleIdFromToken(token);
     User user = userRepository.findByGoogleId(googleId)
         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
-    Collection<GrantedAuthority> auths = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
 
-    return new UsernamePasswordAuthenticationToken(user, null, auths);
+    CustomUserDetails userDetails = new CustomUserDetails(user);
+    return new UsernamePasswordAuthenticationToken(
+        userDetails, // ⬅️ Principal (사용자 정보 객체)
+        null,        // ⬅️ Credentials (비밀번호, 필요 없음)
+        userDetails.getAuthorities() // ⬅️ Authorities (권한 목록)
+    );
   }
 
   private Claims parseClaims(String token) {

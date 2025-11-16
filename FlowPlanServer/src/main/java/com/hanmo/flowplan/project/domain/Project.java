@@ -29,7 +29,7 @@ public class Project {
 
   // --- UI 필드 매핑 ---
   @Column(nullable = false)
-  private String name; // 1. 프로젝트 명
+  private String projectName; // 1. 프로젝트 명
 
   @Lob // TEXT 타입
   private String projectType; // 2. 프로젝트 주제
@@ -69,10 +69,11 @@ public class Project {
   private List<Task> tasks = new ArrayList<>();
 
   @Builder
-  public Project(String name, String projectType, Integer teamSize, Integer expectedDurationDays,
+  public Project(User owner, String projectName, String projectType, Integer teamSize, Integer expectedDurationDays,
                  LocalDate startDate, LocalDate endDate, BigDecimal budget, ProjectPriority priority,
                  String stakeholders, String deliverables, String risks, String detailedRequirements) {
-    this.name = name;
+    this.owner = owner;
+    this.projectName = projectName;
     this.projectType = projectType;
     this.teamSize = teamSize;
     this.expectedDurationDays = expectedDurationDays;
@@ -86,20 +87,65 @@ public class Project {
     this.detailedRequirements = detailedRequirements;
   }
 
-  public static Project createProject(CreateProjectRequest createProjectRequest) {
+  // com.hanmo.flowplan.project.domain.Project.java
+
+
+  public static Project createProject(User owner, CreateProjectRequest createProjectRequest) {
+
+    // --- Null에 안전하게 값 처리 ---
+
+    // ⭐️ 1. 날짜 (필수 필드)
+    // (DTO에서 @NotBlank를 걸었지만, 방어적으로 한 번 더 체크)
+    LocalDate start = (createProjectRequest.getStartDate() != null && !createProjectRequest.getStartDate().isBlank())
+        ? LocalDate.parse(createProjectRequest.getStartDate())
+        : null;
+
+    LocalDate end = (createProjectRequest.getEndDate() != null && !createProjectRequest.getEndDate().isBlank())
+        ? LocalDate.parse(createProjectRequest.getEndDate())
+        : null;
+
+    // ⭐️ 2. 예산 (Budget) - null 체크
+    BigDecimal budgetValue = createProjectRequest.getBudget(); // ⬅️ null이면 null이 그대로 들어감
+
+    // ⭐️ 3. 우선순위 (Priority) - null 체크
+    ProjectPriority priorityValue = (createProjectRequest.getPriority() != null && !createProjectRequest.getPriority().isBlank())
+        ? ProjectPriority.valueOf(createProjectRequest.getPriority().toUpperCase())
+        : null; // ⬅️ null이면 null로 저장
+
+    // ⭐️ 4. 리스트 (Stakeholders, Deliverables, Risks) - null 체크
+    // (List가 null일 경우, 빈 문자열 ""을 저장)
+    String stakeholdersValue = (createProjectRequest.getStakeholders() != null)
+        ? String.join(",", createProjectRequest.getStakeholders())
+        : ""; // ⬅️ null이면 빈 문자열로 저장
+
+    String deliverablesValue = (createProjectRequest.getDeliverables() != null)
+        ? String.join(",", createProjectRequest.getDeliverables())
+        : "";
+
+    String risksValue = (createProjectRequest.getRisks() != null)
+        ? String.join(",", createProjectRequest.getRisks())
+        : "";
+
+    // --- Builder에 안전한 값 주입 ---
+
     return Project.builder()
-        .name(createProjectRequest.getProjectName())
+        .owner(owner)
+        // (필수 값들)
+        .projectName(createProjectRequest.getProjectName())
         .projectType(createProjectRequest.getProjectType())
         .teamSize(createProjectRequest.getTeamSize())
         .expectedDurationDays(createProjectRequest.getExpectedDurationDays())
-        .startDate(LocalDate.parse(createProjectRequest.getStartDate()))
-        .endDate(LocalDate.parse(createProjectRequest.getEndDate()))
-        .budget(new BigDecimal(createProjectRequest.getBudget()))
-        .priority(ProjectPriority.valueOf(createProjectRequest.getPriority().toUpperCase()))
-        .stakeholders(String.join(",", createProjectRequest.getStakeholders()))
-        .deliverables(String.join(",", createProjectRequest.getDeliverables()))
-        .risks(String.join(",", createProjectRequest.getRisks()))
-        .detailedRequirements(createProjectRequest.getDetailedRequirements())
+
+        // (선택적 null 가능 값들)
+        .startDate(start)
+        .endDate(end)
+        .budget(budgetValue)
+        .priority(priorityValue)
+        .stakeholders(stakeholdersValue)
+        .deliverables(deliverablesValue)
+        .risks(risksValue)
+
+        .detailedRequirements(createProjectRequest.getDetailedRequirements()) // (String이라 null이어도 OK)
         .build();
   }
 
