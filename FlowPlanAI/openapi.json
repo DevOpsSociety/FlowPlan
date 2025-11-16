@@ -1,0 +1,643 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FlowPlanAI",
+    "description": "AI 기반 WBS(Work Breakdown Structure) 자동 생성 API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/wbs/generate-spec": {
+      "post": {
+        "tags": [
+          "WBS"
+        ],
+        "summary": "프로젝트 명세서 생성 (마크다운)",
+        "description": "프로젝트 정보를 마크다운 형식의 상세 명세서로 변환합니다.\n    \n    **워크플로우**:\n    1. 이 API로 마크다운 명세서 생성\n    2. 사용자가 명세서를 검토하고 수정\n    3. `/generate-from-spec` API로 WBS 생성\n    \n    이 방식을 사용하면 더 정확하고 상세한 WBS를 얻을 수 있습니다.",
+        "operationId": "generate_markdown_spec_api_v1_wbs_generate_spec_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/WBSGenerateRequest"
+                  }
+                ],
+                "examples": {
+                  "simple": {
+                    "summary": "간단한 예시",
+                    "value": {
+                      "project_name": "신규 앱 개발",
+                      "project_type": "모바일 앱",
+                      "team_size": 5,
+                      "expected_duration_days": 30
+                    }
+                  }
+                },
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkdownSpecResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wbs/generate-from-spec": {
+      "post": {
+        "tags": [
+          "WBS"
+        ],
+        "summary": "마크다운 명세서로부터 WBS 생성",
+        "description": "마크다운 형식의 프로젝트 명세서를 분석하여 WBS를 생성합니다.\n    \n    **권장 워크플로우**:\n    1. `/generate-spec`으로 초기 명세서 생성\n    2. 사용자가 명세서를 상세히 수정\n    3. 이 API로 정확한 WBS 생성\n    \n    명세서에 작성된 모든 요구사항, 기능, 제약사항이 WBS에 반영됩니다.",
+        "operationId": "generate_wbs_from_spec_api_v1_wbs_generate_from_spec_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WBSFromSpecRequest"
+              },
+              "example": {
+                "markdown_spec": "# 프로젝트 명세서: FlowPlan 앱 개발\n\n## 프로젝트 개요\n- **프로젝트명**: FlowPlan 앱\n- **기간**: 2024-01-01 ~ 2024-01-30 (30일)\n- **팀 구성**: 5명 (PM 1, 개발자 3, 디자이너 1)\n\n## 프로젝트 목적\n일정 관리 및 협업을 위한 모바일 앱 개발\n\n## 핵심 기능\n### 1. 간트차트\n- 드래그앤드롭으로 일정 조정\n- 마일스톤 표시\n\n### 2. WBS 자동 생성\n- AI 기반 작업 분해\n\n### 3. 칸반보드\n- 작업 상태 관리\n"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WBSGenerateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wbs/generate-from-spec/flat": {
+      "post": {
+        "tags": [
+          "WBS"
+        ],
+        "summary": "마크다운으로부터 WBS 생성 (Flat 구조 - 스프링 DB용)",
+        "description": "마크다운 명세서로부터 WBS를 생성하고, **스프링 서버 DB 저장용 Flat 구조**로 변환합니다.\n    \n    **스프링에서 저장하는 방법**:\n    ```java\n    // 순서대로 저장하며 task_id -> DB id 매핑\n    Map<String, Long> taskIdMap = new HashMap<>();\n    \n    for (WBSTaskDto dto : tasks) {\n        Task task = new Task();\n        task.setName(dto.getName());\n        \n        // 부모 작업이 있으면 매핑된 DB id 설정\n        if (dto.getParentTaskId() != null) {\n            Long parentDbId = taskIdMap.get(dto.getParentTaskId());\n            task.setParentId(parentDbId);\n        }\n        \n        Task saved = taskRepository.save(task);\n        taskIdMap.put(dto.getTaskId(), saved.getId());\n    }\n    ```\n    \n    **ERD Tasks 테이블 매핑**:\n    - task_id → UI 표시용 (1.0, 1.1, 1.2...)\n    - parent_task_id → 부모의 task_id (스프링이 DB id로 변환)\n    - name → Tasks.name\n    - assignee → Tasks.assignee_id (사용자 매핑 필요)\n    - start_date/end_date → Tasks.start_date/end_date\n    - progress → Tasks.progress (항상 0)\n    - status → Tasks.status (항상 \"할일\")",
+        "operationId": "generate_wbs_from_spec_flat_api_v1_wbs_generate_from_spec_flat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WBSFromSpecRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Generate Wbs From Spec Flat Api V1 Wbs Generate From Spec Flat Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wbs/health": {
+      "get": {
+        "tags": [
+          "WBS"
+        ],
+        "summary": "WBS 서비스 헬스체크",
+        "description": "WBS 생성 서비스의 상태를 확인합니다.",
+        "operationId": "health_check_api_v1_wbs_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "루트 엔드포인트",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "헬스체크 엔드포인트",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MarkdownSpecResponse": {
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "title": "Project Name",
+            "description": "프로젝트명"
+          },
+          "markdown_spec": {
+            "type": "string",
+            "title": "Markdown Spec",
+            "description": "마크다운 형식의 프로젝트 명세서"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_name",
+          "markdown_spec"
+        ],
+        "title": "MarkdownSpecResponse",
+        "description": "마크다운 프로젝트 명세서 응답 모델",
+        "example": {
+          "markdown_spec": "# 프로젝트 명세서: FlowPlan 모바일 앱 개발\n\n## 📋 프로젝트 개요\n...",
+          "project_name": "FlowPlan 모바일 앱 개발"
+        }
+      },
+      "Priority": {
+        "type": "string",
+        "enum": [
+          "높음",
+          "중간",
+          "낮음"
+        ],
+        "title": "Priority",
+        "description": "우선순위"
+      },
+      "ProjectDuration": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date",
+            "description": "시작일"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date",
+            "description": "종료일"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "ProjectDuration",
+        "description": "프로젝트 기간"
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "할일",
+          "진행중",
+          "완료"
+        ],
+        "title": "TaskStatus",
+        "description": "작업 상태 (ERD 기준)"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WBSFromSpecRequest": {
+        "properties": {
+          "markdown_spec": {
+            "type": "string",
+            "title": "Markdown Spec",
+            "description": "프로젝트 명세서 (마크다운 형식)",
+            "example": "# 프로젝트 명세서: FlowPlan 앱 개발\n\n## 📋 프로젝트 개요\n- **프로젝트명**: FlowPlan 앱\n- **기간**: 2024-01-01 ~ 2024-01-14 (14일)\n- **팀 구성**: 5명\n\n## 🎯 프로젝트 목적\n일정 관리 도구 개발\n\n## ✨ 핵심 기능\n1. 간트차트\n2. WBS 자동 생성\n3. 칸반보드\n"
+          }
+        },
+        "type": "object",
+        "required": [
+          "markdown_spec"
+        ],
+        "title": "WBSFromSpecRequest",
+        "description": "마크다운 명세서 기반 WBS 생성 요청"
+      },
+      "WBSGenerateRequest": {
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "title": "Project Name",
+            "description": "[필수] 프로젝트명",
+            "example": "FlowPlan 앱 개발"
+          },
+          "project_type": {
+            "type": "string",
+            "title": "Project Type",
+            "description": "[필수] 프로젝트 주제 (어떤 종류의 프로젝트인가요?)",
+            "example": "모바일 앱"
+          },
+          "team_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Team Size",
+            "description": "[필수] 참여 인원 수",
+            "example": 5
+          },
+          "expected_duration_days": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Expected Duration Days",
+            "description": "[필수] 예상 기간(일)",
+            "example": 60
+          },
+          "project_duration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectDuration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "[선택] 시작일/마감일 (구체적인 날짜)"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget",
+            "description": "[선택] 예산",
+            "example": "5000만원"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "[선택] 우선순위 (높음/중간/낮음)",
+            "default": "중간"
+          },
+          "stakeholders": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stakeholders",
+            "description": "[선택] 주요 이해관계자",
+            "default": [],
+            "example": [
+              "CEO",
+              "마케팅팀"
+            ]
+          },
+          "deliverables": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliverables",
+            "description": "[선택] 주요 산출물",
+            "default": [],
+            "example": [
+              "앱 출시",
+              "API 문서"
+            ]
+          },
+          "risks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risks",
+            "description": "[선택] 예상 리스크",
+            "default": [],
+            "example": [
+              "일정 지연"
+            ]
+          },
+          "detailed_requirements": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detailed Requirements",
+            "description": "[선택] 더 구체적인 요구사항",
+            "example": "다크모드 지원, 오프라인 동기화"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_name",
+          "project_type",
+          "team_size",
+          "expected_duration_days"
+        ],
+        "title": "WBS 생성 요청",
+        "description": "필수: project_name, project_type, team_size, expected_duration_days"
+      },
+      "WBSGenerateResponse": {
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "title": "Project Name",
+            "description": "프로젝트명"
+          },
+          "total_tasks": {
+            "type": "integer",
+            "title": "Total Tasks",
+            "description": "전체 작업 수"
+          },
+          "total_duration_days": {
+            "type": "integer",
+            "title": "Total Duration Days",
+            "description": "전체 기간(일)"
+          },
+          "wbs_structure": {
+            "items": {
+              "$ref": "#/components/schemas/WBSTask"
+            },
+            "type": "array",
+            "title": "Wbs Structure",
+            "description": "WBS 구조"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_name",
+          "total_tasks",
+          "total_duration_days",
+          "wbs_structure"
+        ],
+        "title": "WBSGenerateResponse",
+        "description": "WBS 생성 응답 모델",
+        "example": {
+          "project_name": "프로젝트 기획 시작하기",
+          "total_duration_days": 21,
+          "total_tasks": 12,
+          "wbs_structure": [
+            {
+              "assignee": "PM",
+              "dependencies": [],
+              "duration_days": 21,
+              "end_date": "2024-01-21",
+              "progress": 85,
+              "start_date": "2024-01-01",
+              "status": "진행 중",
+              "subtasks": [],
+              "task_id": "1.0",
+              "task_name": "프로젝트 기획"
+            }
+          ]
+        }
+      },
+      "WBSTask": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "작업 ID (계층 구조)",
+            "example": "1.1"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "상위 작업 ID (1.0의 하위는 parent_id='1.0')",
+            "example": "1.0"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "작업명",
+            "example": "요구사항 분석"
+          },
+          "assignee": {
+            "type": "string",
+            "title": "Assignee",
+            "description": "담당자 (assignee_id 매핑 필요)",
+            "example": "PM"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date",
+            "description": "시작일"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date",
+            "description": "종료일"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days",
+            "description": "기간(일)",
+            "example": 7
+          },
+          "progress": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "description": "진행률(%) - 기본값 0",
+            "default": 0
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskStatus"
+              }
+            ],
+            "description": "상태 - 기본값 '할일'",
+            "default": "할일"
+          },
+          "subtasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WBSTask"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtasks",
+            "description": "하위 작업 (flat 구조 변환 가능)",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "name",
+          "assignee",
+          "start_date",
+          "end_date",
+          "duration_days"
+        ],
+        "title": "WBSTask",
+        "description": "WBS 작업 항목 (스프링 서버 ERD 호환)"
+      }
+    }
+  }
+}

@@ -11,12 +11,6 @@ class Priority(str, Enum):
     LOW = "낮음"
 
 
-class ProjectDuration(BaseModel):
-    """프로젝트 기간"""
-    start_date: date = Field(..., description="시작일")
-    end_date: date = Field(..., description="종료일")
-
-
 class WBSGenerateRequest(BaseModel):
     """WBS 생성 요청 모델
     
@@ -58,11 +52,17 @@ class WBSGenerateRequest(BaseModel):
     )
     
     # ========================================
-    # 선택 입력 (Optional)
+    # 선택 입력 (Optional) — 개별 날짜 필드를 사용합니다
     # ========================================
-    project_duration: Optional[ProjectDuration] = Field(
-        None, 
-        description="[선택] 시작일/마감일 (구체적인 날짜)"
+    start_date: Optional[date] = Field(
+        None,
+        description="[선택] 시작일 (YYYY-MM-DD)",
+        example="2024-01-01"
+    )
+    end_date: Optional[date] = Field(
+        None,
+        description="[선택] 마감일 (YYYY-MM-DD)",
+        example="2024-03-31"
     )
     budget: Optional[str] = Field(
         None, 
@@ -88,25 +88,11 @@ class WBSGenerateRequest(BaseModel):
         description="[선택] 예상 리스크", 
         example=["일정 지연"]
     )
-    project_purpose: Optional[str] = Field(
-        None, 
-        description="[선택] 프로젝트 목적", 
-        example="일정 관리 도구 개발"
-    )
-    key_features: Optional[List[str]] = Field(
-        default=[], 
-        description="[선택] 주요 기능", 
-        example=["간트차트", "WBS"]
-    )
     detailed_requirements: Optional[str] = Field(
         None, 
         description="[선택] 더 구체적인 요구사항",
         example="다크모드 지원, 오프라인 동기화"
     )
-    constraints: Optional[str] = Field(
-        None, 
-        description="[선택] 제약 사항",
-        example="애자일 방법론, 2주 스프린트"
-    )
+    
     
 

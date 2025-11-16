@@ -40,11 +40,11 @@ class WBSGenerator:
     def _prepare_project_data(self, request: WBSGenerateRequest) -> Dict[str, Any]:
         """요청 데이터를 Gemini API용 형식으로 변환"""
         
-        # 기간 계산: 구체적인 날짜가 있으면 사용, 없으면 예상 기간 사용
-        if request.project_duration:
-            total_days = (request.project_duration.end_date - request.project_duration.start_date).days + 1
-            start_date = request.project_duration.start_date.isoformat()
-            end_date = request.project_duration.end_date.isoformat()
+        # 기간 계산: start_date/end_date가 주어진 경우 해당 날짜를 사용
+        if request.start_date and request.end_date:
+            total_days = (request.end_date - request.start_date).days + 1
+            start_date = request.start_date.isoformat()
+            end_date = request.end_date.isoformat()
         else:
             total_days = request.expected_duration_days
             start_date = None
@@ -66,13 +66,9 @@ class WBSGenerator:
             "priority": request.priority.value if request.priority else None,
             "stakeholders": request.stakeholders,
             "deliverables": request.deliverables,
-            "risks": request.risks,
             
             # 상세 요구사항
-            "project_purpose": request.project_purpose,
-            "key_features": request.key_features,
-            "detailed_requirements": request.detailed_requirements,
-            "constraints": request.constraints
+            "detailed_requirements": request.detailed_requirements
         }
     
     def _parse_and_validate_wbs(self, json_str: str) -> Dict[str, Any]:
