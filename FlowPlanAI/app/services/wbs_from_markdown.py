@@ -34,10 +34,10 @@ class WBSFromMarkdownGenerator:
     
     def _parse_and_validate_wbs(self, json_str: str) -> Dict[str, Any]:
         """
-        Gemini 응답을 파싱하고 검증
+        Groq 응답을 파싱하고 검증
         
         Args:
-            json_str: Gemini가 생성한 JSON 문자열
+            json_str: Groq가 생성한 JSON 문자열
             
         Returns:
             파싱된 딕셔너리
@@ -51,9 +51,22 @@ class WBSFromMarkdownGenerator:
             # JSON 파싱
             wbs_data = json.loads(json_str)
             
+            # 필수 필드 확인
+            required_fields = ['project_name', 'total_tasks', 'total_duration_days', 'wbs_structure']
+            missing_fields = [field for field in required_fields if field not in wbs_data]
+            
+            if missing_fields:
+                raise ValueError(
+                    f"필수 필드 누락: {', '.join(missing_fields)}\n"
+                    f"AI 응답 키: {list(wbs_data.keys())}\n"
+                    f"AI가 한글 키를 사용했을 수 있습니다. 프롬프트를 수정해야 합니다."
+                )
+            
             return wbs_data
             
         except json.JSONDecodeError as e:
-            raise ValueError(f"WBS JSON 파싱 실패: {str(e)}\n응답: {json_str[:500]}")
+            raise ValueError(f"WBS JSON 파싱 실패: {str(e)}\n응답 (처음 500자): {json_str[:500]}")
+        except ValueError:
+            raise
         except Exception as e:
-            raise ValueError(f"WBS 데이터 검증 실패: {str(e)}")
+            raise ValueError(f"WBS 데이터 검증 실패: {str(e)}\n응답: {json_str[:500]}")

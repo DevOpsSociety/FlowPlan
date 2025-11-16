@@ -1,354 +1,279 @@
-from google import genai
-from google.genai import types
+﻿from groq import Groq
 from app.core.config import settings
 from typing import Dict, Any
 import asyncio
 
 
 class GeminiService:
-    """Google Gemini API 서비스"""
+    """Groq API 서비스 (프롬프트 빌드 + 호출)
 
-    def __init__(self):
-        """Gemini API 초기화"""
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.model_name = settings.GEMINI_MODEL
+    단일, 일관된 구현만 포함합니다. 이 클래스는 세 가지 공개 메서드를 제공합니다:
+    - generate_markdown_spec(project_data)
+    - generate_wbs_from_markdown(markdown_spec)
+    - generate_wbs_structure(project_data)
+    
+    Note: 클래스명은 호환성을 위해 GeminiService로 유지하지만 내부적으로 Groq API를 사용합니다.
+    """
+
+    def __init__(self) -> None:
+        """Groq 클라이언트 초기화"""
+        self.client = Groq(api_key=settings.GROQ_API_KEY)
+        self.model_name = settings.GROQ_MODEL
 
     async def generate_markdown_spec(self, project_data: Dict[str, Any]) -> str:
-        """
-        프로젝트 정보를 마크다운 명세서로 변환
-        
-        Args:
-            project_data: 프로젝트 정보 딕셔너리
-            
-        Returns:
-            마크다운 형식의 프로젝트 명세서
-        """
+        """프로젝트 정보를 받아 편집 가능한 마크다운 명세서를 반환합니다."""
         prompt = self._build_markdown_prompt(project_data)
-        response = await self._generate_content(prompt)
-        return response
+        return await self._generate_content(prompt, json_mode=False)
 
     async def generate_wbs_from_markdown(self, markdown_spec: str) -> str:
-        """
-        마크다운 명세서를 기반으로 WBS 생성
-        
-        Args:
-            markdown_spec: 마크다운 형식의 프로젝트 명세서
-            
-        Returns:
-            JSON 형식의 WBS 구조 문자열
-        """
+        """마크다운 명세서로부터 JSON WBS 구조(문자열)를 생성합니다."""
         prompt = self._build_wbs_from_markdown_prompt(markdown_spec)
-        response = await self._generate_content(prompt)
-        return response
+        return await self._generate_content(prompt, json_mode=True)
 
     async def generate_wbs_structure(self, project_data: Dict[str, Any]) -> str:
-        """
-        프로젝트 정보를 기반으로 WBS 구조를 생성합니다.
-        
-        Args:
-            project_data: 프로젝트 정보 딕셔너리
-            
-        Returns:
-            JSON 형식의 WBS 구조 문자열
-        """
+        """프로젝트 정보를 받아 JSON WBS 구조(문자열)를 생성합니다."""
         prompt = self._build_wbs_prompt(project_data)
+        return await self._generate_content(prompt, json_mode=True)
 
-        response = await self._generate_content(prompt)
-        return response
+    def _build_common_header(self, data: Dict[str, Any]) -> str:
+        parts = [
+            "당신은 프로젝트 관리 전문가입니다. 다음 정보를 기반으로 작업을 수행하세요.",
+            f"프로젝트명: {data.get('project_name')}",
+            f"프로젝트 주제: {data.get('project_type')}",
+            f"참여인원: {data.get('team_size')}",
+        ]
 
-    def _build_wbs_prompt(self, data: Dict[str, Any]) -> str:
-        """WBS 생성을 위한 프롬프트 구성"""
-        
-        # ... (이 메서드의 다른 부분은 동일) ...
-        
-        date_info = ""
         if data.get('start_date') and data.get('end_date'):
-            date_info = f"- 시작일: {data['start_date']}\n- 마감일: {data['end_date']}\n"
-        date_info += f"- 전체 기간: {data['total_days']}일"
-        
-        additional_info = []
+            parts.append(f"기간: {data.get('start_date')} ~ {data.get('end_date')} ({data.get('total_days')}일)")
+        else:
+            parts.append(f"예상 기간: {data.get('total_days')}일")
+
         if data.get('budget'):
-            additional_info.append(f"- 예산: {data['budget']}")
+            parts.append(f"예산: {data.get('budget')}")
         if data.get('priority'):
-            additional_info.append(f"- 우선순위: {data['priority']}")
+            parts.append(f"우선순위: {data.get('priority')}")
         if data.get('stakeholders'):
-            additional_info.append(f"- 주요 이해관계자: {', '.join(data['stakeholders'])}")
+            parts.append(f"주요 이해관계자: {', '.join(data.get('stakeholders'))}")
         if data.get('deliverables'):
-            additional_info.append(f"- 주요 산출물: {', '.join(data['deliverables'])}")
+            parts.append(f"주요 산출물: {', '.join(data.get('deliverables'))}")
         if data.get('risks'):
-            additional_info.append(f"- 예상 리스크: {', '.join(data['risks'])}")
-        
-        additional_section = "\n".join(additional_info) if additional_info else ""
-        
-        requirements_info = []
-        if data.get('project_purpose'):
-            requirements_info.append(f"- 프로젝트 목적: {data['project_purpose']}")
-        if data.get('key_features'):
-            requirements_info.append(f"- 주요 기능: {', '.join(data['key_features'])}")
+            parts.append(f"예상 리스크: {', '.join(data.get('risks'))}")
         if data.get('detailed_requirements'):
-            requirements_info.append(f"- 구체적 요구사항: {data['detailed_requirements']}")
-        if data.get('constraints'):
-            requirements_info.append(f"- 제약사항: {data['constraints']}")
-        
-        requirements_section = "\n".join(requirements_info) if requirements_info else ""
-        
-        additional_block = ""
-        if additional_section:
-            additional_block = f"\n## 💰 추가 정보\n{additional_section}\n"
-        
-        requirements_block = ""
-        if requirements_section:
-            requirements_block = f"\n## 🎯 요구사항\n{requirements_section}\n"
-        
-        prompt = f"""
-당신은 프로젝트 관리 전문가입니다. 다음 프로젝트 정보를 기반으로 상세하고 현실적인 WBS(Work Breakdown Structure)를 생성해주세요.
+            parts.append(f"구체적 요구사항: {data.get('detailed_requirements')}")
 
-## 📋 프로젝트 기본 정보
-- 프로젝트명: {data['project_name']}
-- 프로젝트 주제: {data['project_type']}
-- 팀 규모: {data['team_size']}명
-{date_info}{additional_block}{requirements_block}
-
-## 📝 WBS 생성 지침
-1. 프로젝트를 3-5개의 주요 단계(Phase)로 분해
-2. 각 단계를 2-4개의 세부 작업(Task)으로 분해
-3. 각 작업에 적절한 담당자 역할 배정 (PM, 기획자, 개발자, 디자이너, QA 등)
-4. 작업 기간은 전체 프로젝트 기간 내에서 현실적으로 배분
-5. 작업 간 의존성을 고려하여 순차적으로 배치
-6. 예상 리스크를 고려한 여유 기간 포함
-7. 주요 산출물 완성 시점을 마일스톤으로 표시
-
-## 출력 형식
-반드시 다음 JSON 형식으로만 응답해주세요. 다른 설명은 포함하지 마세요.
-
-**중요**: 
-- progress는 항상 0
-- status는 항상 "할일"
-- parent_id는 상위 작업의 task_id (최상위는 null)
-- dependencies 필드는 사용하지 않음
-# [수정됨] duration_days는 반드시 정수여야 한다는 규칙 추가
-- 'duration_days'(일수) 필드는 **반드시 1, 2, 3과 같은 정수(integer)여야 하며,** 절대로 0.5, 0.2와 같은 소수점(float)을 사용하면 안 됩니다.
-
-{{
-  "project_name": "프로젝트명",
-  "total_tasks": 총_작업_수,
-  "total_duration_days": 전체_기간,
-  "wbs_structure": [
-    {{
-      "task_id": "1.0",
-      "parent_id": null,
-      "name": "주요 단계명",
-      "assignee": "담당자",
-      "start_date": "YYYY-MM-DD",
-      "end_date": "YYYY-MM-DD",
-      "duration_days": 일수,
-      "progress": 0,
-      "status": "할일",
-      "subtasks": [
-        {{
-          "task_id": "1.1",
-          "parent_id": "1.0",
-          "name": "세부 작업명",
-          "assignee": "담당자",
-          "start_date": "YYYY-MM-DD",
-          "end_date": "YYYY-MM-DD",
-          "duration_days": 일수,
-          "progress": 0,
-          "status": "할일",
-          "subtasks": []
-        }}
-      ]
-    }}
-  ]
-}}
-
-JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명은 포함하지 마세요.
-"""
-        return prompt
+        return "\n".join(parts)
 
     def _build_markdown_prompt(self, data: Dict[str, Any]) -> str:
-        """마크다운 명세서 생성 프롬프트"""
+        header = self._build_common_header(data)
         
-        # ... (이 메서드는 WBS JSON을 만들지 않으므로 수정할 필요 없음) ...
-        
-        date_info = ""
-        if data.get('start_date') and data.get('end_date'):
-            date_info = f"- **기간**: {data['start_date']} ~ {data['end_date']} ({data['total_days']}일)\n"
-        else:
-            date_info = f"- **예상 기간**: {data['total_days']}일\n"
-        
-        prompt = f"""
-당신은 프로젝트 관리 전문가입니다. 다음 프로젝트 정보를 상세하고 체계적인 마크다운 명세서로 작성해주세요.
-사용자가 이 명세서를 수정하여 더 정확한 WBS를 생성할 수 있도록 편집하기 쉬운 형식으로 만들어주세요.
-
-## 입력 정보:
-- 프로젝트명: {data['project_name']}
-- 프로젝트 주제: {data['project_type']}
-- 팀 규모: {data['team_size']}명
-- 기간: {data['total_days']}일
-{f"- 예산: {data['budget']}" if data.get('budget') else ""}
-{f"- 우선순위: {data['priority']}" if data.get('priority') else ""}
-{f"- 이해관계자: {', '.join(data['stakeholders'])}" if data.get('stakeholders') else ""}
-{f"- 산출물: {', '.join(data['deliverables'])}" if data.get('deliverables') else ""}
-{f"- 리스크: {', '.join(data['risks'])}" if data.get('risks') else ""}
-{f"- 프로젝트 목적: {data['project_purpose']}" if data.get('project_purpose') else ""}
-{f"- 주요 기능: {', '.join(data['key_features'])}" if data.get('key_features') else ""}
-{f"- 구체적 요구사항: {data['detailed_requirements']}" if data.get('detailed_requirements') else ""}
-{f"- 제약사항: {data['constraints']}" if data.get('constraints') else ""}
-
-## 출력 형식:
-다음 구조로 마크다운 명세서를 작성하세요. 사용자가 각 섹션을 쉽게 수정할 수 있도록 명확하게 구분하세요.
-
-```markdown
-# 프로젝트 명세서: [프로젝트명]
+        markdown_example = """# 프로젝트 명세서: {프로젝트명}
 
 ## 📋 프로젝트 개요
-- **프로젝트명**: 
-- **프로젝트 주제**: 
-- **팀 구성**: 
-- **기간**: 
-- **예산**: 
-- **우선순위**: 
+- **프로젝트명**: {프로젝트명}
+- **프로젝트 유형**: {프로젝트 유형}
+- **기간**: {시작일} ~ {종료일} (총 {일수}일)
+- **팀 구성**: 총 {인원}명
 
 ## 🎯 프로젝트 목적
-[프로젝트의 목적과 배경을 상세히 설명]
+이 프로젝트의 주요 목적과 배경을 작성하세요.
 
-## 💼 주요 이해관계자
-- [이름/역할] - [책임사항]
+## 🔑 핵심 기능
+### 1. 기능명
+- 상세 설명
 
 ## 📦 주요 산출물
-1. [산출물 1] - [설명]
-2. [산출물 2] - [설명]
+- 산출물 1
+- 산출물 2
 
-## ⚠️ 예상 리스크 및 완화 방안
-- **리스크**: [리스크 설명]
-  - **완화 방안**: [대응 방안]
+## 👥 이해관계자
+- 이해관계자 목록
 
-## ✨ 핵심 기능 및 요구사항
-### [기능 1]
-- [상세 설명]
-- [기술 요구사항]
+## ⚠️ 리스크 및 제약사항
+- 예상 리스크
+- 기술적 제약사항
 
-## 🔧 기술 요구사항
-- [요구사항 1]
-- [요구사항 2]
+## 📝 상세 요구사항
+구체적인 요구사항과 기능 명세를 작성하세요."""
+        
+        prompt = f"""{header}
 
-## 📐 제약사항 및 가이드라인
-- [제약사항 1]
-- [제약사항 2]
+위 프로젝트 정보를 기반으로 **마크다운 형식의 상세한 프로젝트 명세서**를 작성하세요.
 
-## 📅 주요 마일스톤 (선택)
-- [날짜]: [마일스톤 설명]
-```
+**중요 지침**:
+1. 반드시 마크다운(Markdown) 문법으로 작성 (JSON 형식 사용 금지)
+2. 제목은 #, ##, ### 등의 마크다운 헤딩 사용
+3. 리스트는 -, * 또는 번호 사용
+4. 프로젝트 정보를 명확하고 읽기 쉽게 구조화
+5. 사용자가 나중에 수정할 수 있도록 충분히 상세하게 작성
+6. 다른 설명 없이 마크다운 명세서만 출력
 
-마크다운 형식만 출력하고, 코드 블록 마커나 다른 설명은 포함하지 마세요.
-"""
+마크다운 예시 구조:
+{markdown_example}
+
+위 구조를 참고하여 프로젝트 명세서를 마크다운 형식으로 작성하세요."""
+        
         return prompt
 
-    def _build_wbs_from_markdown_prompt(self, markdown_spec: str) -> str:
-        """마크다운 명세서로부터 WBS 생성 프롬프트"""
+    def _build_wbs_prompt(self, data: Dict[str, Any]) -> str:
+        header = self._build_common_header(data)
         
-        prompt = f"""
-당신은 프로젝트 관리 전문가입니다. 다음 마크다운 형식의 프로젝트 명세서를 분석하여 상세한 WBS(Work Breakdown Structure)를 생성해주세요.
-
-명세서의 모든 내용을 꼼꼼히 읽고, 언급된 기능, 요구사항, 제약사항, 리스크를 모두 반영하여 현실적이고 실행 가능한 작업 분해 구조를 만들어주세요.
-
-## 프로젝트 명세서:
-
-{markdown_spec}
-
-## WBS 생성 지침:
-1. 명세서의 **핵심 기능**을 기준으로 주요 단계를 구성
-2. **기술 요구사항**을 고려하여 세부 작업 생성
-3. **제약사항**에 맞춰 작업 기간 배분
-4. **리스크 완화 방안**을 작업에 반영
-5. **마일스톤**이 있다면 중요 작업에 표시
-6. **팀 구성**을 고려하여 담당자 배정
-
-## 출력 형식:
-반드시 다음 JSON 형식으로만 응답해주세요.
-
-**중요 규칙**:
-- progress는 항상 0 (초기 생성 시)
-- status는 항상 "할일" (초기 생성 시)
-- parent_id는 상위 작업의 task_id (최상위 작업은 null)
-- dependencies 필드는 사용하지 않음
-# [수정됨] duration_days는 반드시 정수여야 한다는 규칙 추가
-- 'duration_days'(일수) 필드는 **반드시 1, 2, 3과 같은 정수(integer)여야 하며,** 절대로 0.5, 0.2와 같은 소수점(float)을 사용하면 안 됩니다.
-
-{{
+        schema_example = '''{
   "project_name": "프로젝트명",
-  "total_tasks": 총_작업_수,
-  "total_duration_days": 전체_기간,
+  "total_tasks": 10,
+  "total_duration_days": 30,
   "wbs_structure": [
-    {{
+    {
       "task_id": "1.0",
       "parent_id": null,
-      "name": "주요 단계명",
-      "assignee": "담당자",
-      "start_date": "YYYY-MM-DD",
-      "end_date": "YYYY-MM-DD",
-      "duration_days": 일수,
+      "name": "메인 작업",
+      "assignee": "PM",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-10",
+      "duration_days": 10,
+      "progress": 0,
+      "status": "할일",
+      "subtasks": []
+    }
+  ]
+}'''
+        
+        instructions = f"""
+위 프로젝트 정보를 기반으로 WBS(Work Breakdown Structure)를 생성하세요.
+
+**중요: 반드시 아래 JSON 스키마를 정확히 따라야 합니다.**
+
+필수 규칙:
+1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
+2. task_id는 "1.0", "1.1", "1.1.1" 형식 (최대 3단계)
+3. progress는 항상 0
+4. status는 항상 "할일"
+5. duration_days는 정수(integer)
+6. start_date, end_date는 "YYYY-MM-DD" 형식
+7. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+8. JSON만 출력 (설명, 코드블록 금지)
+
+JSON 스키마:
+{schema_example}
+
+위 스키마를 따라 WBS를 생성하세요."""
+        
+        return "\n\n".join([header, instructions])
+
+    def _build_wbs_from_markdown_prompt(self, markdown_spec: str) -> str:
+        schema_example = '''{
+  "project_name": "프로젝트명",
+  "total_tasks": 10,
+  "total_duration_days": 30,
+  "wbs_structure": [
+    {
+      "task_id": "1.0",
+      "parent_id": null,
+      "name": "프로젝트 계획",
+      "assignee": "PM",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-10",
+      "duration_days": 10,
       "progress": 0,
       "status": "할일",
       "subtasks": [
-        {{
+        {
           "task_id": "1.1",
           "parent_id": "1.0",
-          "name": "세부 작업명",
-          "assignee": "담당자",
-          "start_date": "YYYY-MM-DD",
-          "end_date": "YYYY-MM-DD",
-          "duration_days": 일수,
+          "name": "요구사항 분석",
+          "assignee": "개발자",
+          "start_date": "2024-01-01",
+          "end_date": "2024-01-05",
+          "duration_days": 5,
           "progress": 0,
           "status": "할일",
           "subtasks": []
-        }}
+        }
       ]
-    }}
+    }
   ]
-}}
+}'''
+        
+        prompt = f"""다음 마크다운 명세서를 분석하여 WBS(Work Breakdown Structure)를 생성하세요.
 
-JSON 형식만 출력하고, 마크다운 코드 블록(```)이나 다른 설명은 포함하지 마세요.
-"""
+**중요: 반드시 아래 JSON 스키마를 정확히 따라야 합니다. 키 이름을 변경하거나 한글로 번역하지 마세요.**
+
+필수 규칙:
+1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
+2. task_id는 "1.0", "1.1", "1.1.1" 형식
+3. progress는 항상 0
+4. status는 항상 "할일"
+5. duration_days는 정수(integer)
+6. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+7. JSON 코드블록(```)으로 감싸지 말고 순수 JSON만 출력
+
+JSON 스키마 예시:
+{schema_example}
+
+마크다운 명세서:
+{markdown_spec}
+
+위 명세서를 분석하여 JSON 형식의 WBS를 생성하세요. 다른 설명 없이 JSON만 출력하세요."""
+        
         return prompt
 
-    async def _generate_content(self, prompt: str) -> str:
-        """
-        Gemini API를 호출하여 컨텐츠 생성
+    async def _generate_content(self, prompt: str, json_mode: bool = False) -> str:
+        """Groq API를 호출하여 텍스트를 반환합니다. 재시도 로직 포함.
         
         Args:
-            prompt: 생성 프롬프트
-            
-        Returns:
-            생성된 텍스트
+            prompt: AI에게 전달할 프롬프트
+            json_mode: True이면 JSON만 출력하도록 강제, False이면 일반 텍스트
         """
         max_retries = 5
         backoff_seconds = 1
 
         for attempt in range(1, max_retries + 1):
             try:
-                # Gemini client is blocking; run in thread to avoid blocking the event loop
+                # 시스템 메시지 설정
+                if json_mode:
+                    system_message = "You are a project management expert. You must respond EXACTLY in the requested format. When asked for JSON, output ONLY valid JSON without any explanations, markdown code blocks, or additional text. Use the exact field names specified in the schema."
+                else:
+                    system_message = "You are a project management expert. You must respond in the requested format. When asked for markdown, output well-structured markdown content."
+                
+                # API 호출 파라미터 준비
+                api_params = {
+                    "model": self.model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": system_message
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 8000,
+                }
+                
+                # JSON 모드일 때만 response_format 추가
+                if json_mode:
+                    api_params["response_format"] = {"type": "json_object"}
+                
+                # Groq API 호출 (chat completions 형식)
                 response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model_name,
-                    contents=prompt,
+                    self.client.chat.completions.create,
+                    **api_params
                 )
-                return response.text
-
+                
+                # 응답 텍스트 추출
+                if response.choices and len(response.choices) > 0:
+                    return response.choices[0].message.content
+                else:
+                    raise Exception("Groq API로부터 유효한 응답을 받지 못했습니다.")
+                    
             except Exception as e:
                 err_str = str(e)
-                # If last attempt, raise
                 if attempt == max_retries:
-                    raise Exception(f"Gemini API 호출 실패 after {attempt} attempts: {err_str}")
-
-                # For transient errors (503 / UNAVAILABLE) perform exponential backoff and retry
-                # If error message contains 'UNAVAILABLE' or '503', treat as retryable
-                if 'UNAVAILABLE' in err_str or '503' in err_str or 'overloaded' in err_str.lower():
-                    wait = min(backoff_seconds, 30)
-                    await asyncio.sleep(wait)
-                    backoff_seconds *= 2
+                    raise Exception(f"Groq API 호출 실패 after {attempt} attempts: {err_str}")
+                # transient retry conditions
+                if 'UNAVAILABLE' in err_str or '503' in err_str or 'overloaded' in err_str.lower() or 'rate_limit' in err_str.lower():
+                    await asyncio.sleep(backoff_seconds)
+                    backoff_seconds = min(backoff_seconds * 2, 30)
                     continue
-
-                # Non-retryable error: raise immediately
-                raise Exception(f"Gemini API 호출 실패: {err_str}")
+                raise Exception(f"Groq API 호출 실패: {err_str}")

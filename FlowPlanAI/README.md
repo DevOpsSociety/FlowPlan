@@ -55,14 +55,14 @@ FlowPlanAI/
 │   ├── main.py                    # FastAPI 앱 진입점 (CORS, 라우터 등록)
 │   ├── api/
 │   │   └── routes/
-│   │       └── wbs.py             # WBS API 엔드포인트 (5개)
+│   │       └── wbs.py             # WBS API 엔드포인트 (3개: generate-spec, generate-from-spec, generate-from-spec/flat)
 │   ├── services/                  # 비즈니스 로직
 │   │   ├── gemini_service.py      # Gemini API 통합 (프롬프트 엔지니어링)
 │   │   ├── wbs_generator.py       # 직접 WBS 생성
 │   │   ├── markdown_generator.py  # 마크다운 명세서 생성
 │   │   └── wbs_from_markdown.py   # 명세서 기반 WBS 생성
 │   ├── models/                    # Pydantic 데이터 모델
-│   │   ├── request.py             # WBSGenerateRequest (17개 필드)
+│   │   ├── request.py             # WBSGenerateRequest (12개 필드)
 │   │   ├── response.py            # WBSTask, WBSGenerateResponse
 │   │   └── markdown.py            # 마크다운 관련 모델
 │   ├── utils/                     # 유틸리티 함수
@@ -174,42 +174,33 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## API 엔드포인트
 
-### 1. 직접 WBS 생성
-```http
-POST /api/v1/wbs/generate
-```
-프로젝트 정보를 기반으로 한 번에 WBS 생성
+서비스는 아래 3개의 WBS 관련 엔드포인트만 제공합니다:
 
-### 2. 마크다운 명세서 생성
+### 1. 마크다운 명세서 생성 (1단계)
 ```http
 POST /api/v1/wbs/generate-spec
 ```
-프로젝트 정보를 AI가 상세한 마크다운 명세서로 변환
+프로젝트 정보를 AI가 상세한 마크다운 명세서로 변환합니다. 사용자가 이 명세서를 편집한 뒤 다음 단계로 넘기는 것을 권장합니다.
 
-### 3. 명세서 기반 WBS 생성 (계층 구조)
+### 2. 명세서 기반 WBS 생성 (계층 구조, 2단계)
 ```http
 POST /api/v1/wbs/generate-from-spec
 ```
-사용자가 편집한 마크다운 명세서로부터 WBS 생성 (subtasks 포함)
+사용자가 편집한 마크다운 명세서로부터 계층 구조 WBS(JSON)를 생성합니다.
 
-### 4. 명세서 기반 WBS 생성 (Flat 구조)
+### 3. 명세서 기반 WBS 생성 (Flat 구조 - 스프링 DB용)
 ```http
 POST /api/v1/wbs/generate-from-spec/flat
 ```
-스프링 서버 DB 저장용 Flat 구조로 변환 (parent_task_id로 계층 표현)
-
-### 5. 헬스체크
-```http
-GET /api/v1/wbs/health
-```
+마크다운으로 생성된 WBS를 스프링 서버 DB 저장용 Flat 구조로 변환하여 반환합니다 (parent_task_id로 계층 표현).
 
 ## API 사용 예시
 
-### 예시 1: 최소 입력으로 WBS 생성
+### 예시 1: 명세서 생성 (간단)
 
 **요청** (필수 4개 필드만):
 ```bash
-curl -X POST "http://localhost:8000/api/v1/wbs/generate" \
+curl -X POST "http://localhost:8000/api/v1/wbs/generate-spec" \
   -H "Content-Type: application/json" \
   -d '{
     "project_name": "FlowPlan 앱 개발",
@@ -219,45 +210,17 @@ curl -X POST "http://localhost:8000/api/v1/wbs/generate" \
   }'
 ```
 
-**응답**:
+**응답 (예시)**:
 ```json
 {
   "project_name": "FlowPlan 앱 개발",
-  "wbs_structure": [
-    {
-      "task_id": "1.0",
-      "parent_id": null,
-      "name": "기획",
-      "assignee": "PM",
-      "start_date": "2024-01-01",
-      "end_date": "2024-01-10",
-      "duration_days": 10,
-      "progress": 0,
-      "status": "할일",
-      "subtasks": [
-        {
-          "task_id": "1.1",
-          "parent_id": "1.0",
-          "name": "요구사항 분석",
-          "assignee": "BA",
-          "start_date": "2024-01-01",
-          "end_date": "2024-01-05",
-          "duration_days": 5,
-          "progress": 0,
-          "status": "할일",
-          "subtasks": []
-        }
-      ]
-    }
-  ],
-  "total_tasks": 15,
-  "total_duration_days": 60
+  "markdown_spec": "# 프로젝트 명세서: FlowPlan 앱 개발\n\n## 프로젝트 개요\n- **프로젝트명**: FlowPlan 앱 개발\n- **기간**: 2024-01-01 ~ 2024-03-01 (60일)\n..."
 }
 ```
 
-### 예시 2: 상세 입력으로 정확한 WBS 생성
+### 예시 2: 상세 입력으로 명세서 생성 (권장)
 
-**요청** (모든 필드 포함):
+**요청** (권장: 가능한 상세 12개 필드 입력):
 ```json
 {
   "project_name": "FlowPlan 모바일 앱 개발",
@@ -272,11 +235,7 @@ curl -X POST "http://localhost:8000/api/v1/wbs/generate" \
   "priority": "높음",
   "stakeholders": ["CEO", "CTO", "마케팅 이사"],
   "deliverables": ["iOS 앱", "Android 앱", "API 문서"],
-  "risks": ["일정 지연 가능성", "디자인 리소스 부족"],
-  "project_purpose": "프로젝트 일정 관리 플랫폼 개발",
-  "key_features": ["간트차트", "WBS 자동 생성", "칸반보드"],
-  "detailed_requirements": "반응형 디자인, 다크모드 지원, 오프라인 모드",
-  "constraints": "애자일 방법론, 2주 스프린트, iOS 14+ 지원"
+  "detailed_requirements": "반응형 디자인, 다크모드 지원"
 }
 ```
 
@@ -365,30 +324,28 @@ POST /api/v1/wbs/generate-from-spec/flat
 
 ## 입력 필드 설명
 
-### WBSGenerateRequest (17개 필드)
+### WBSGenerateRequest (12개 필드)
 
 | 필드 | 필수 | 타입 | 설명 | 예시 |
 |------|------|------|------|------|
-| **기본 정보 (필수)** |||||
+| **기본 정보 (필수)** ||||| 
 | `project_name` | O | string | 프로젝트명 | "FlowPlan 앱 개발" |
 | `project_type` | O | string | 프로젝트 주제/종류 | "모바일 앱", "웹 서비스" |
 | `team_size` | O | int | 참여 인원 수 | 5, 10 |
 | `expected_duration_days` | O | int | 예상 기간(일) | 60, 90 |
-| **일정 정보 (선택)** |||||
-| `project_duration` | X | object | 시작일/마감일 | `{"start_date": "2024-01-01", "end_date": "2024-03-31"}` |
-| **프로젝트 정보 (선택)** |||||
+| **일정 정보 (선택)** ||||| 
+| `start_date` | X | string(date) | 시작일 (YYYY-MM-DD) | "2024-01-01" |
+| `end_date` | X | string(date) | 마감일 (YYYY-MM-DD) | "2024-03-31" |
+| **프로젝트 정보 (선택)** ||||| 
 | `budget` | X | string | 예산 | "1억원", "$100,000" |
 | `priority` | X | string | 우선순위 | "높음", "중간", "낮음" |
 | `stakeholders` | X | array | 이해관계자 목록 | ["CEO", "CTO", "마케팅 이사"] |
 | `deliverables` | X | array | 주요 산출물 목록 | ["iOS 앱", "Android 앱", "API 문서"] |
-| `risks` | X | array | 예상 리스크 목록 | ["일정 지연 가능성", "리소스 부족"] |
-| **상세 요구사항 (선택)** |||||
-| `project_purpose` | X | string | 프로젝트 목적 | "일정 관리 플랫폼 개발" |
-| `key_features` | X | array | 주요 기능 목록 | ["간트차트", "WBS", "칸반보드"] |
+| **상세 요구사항 (선택)** ||||| 
+| `risks` | X | array | 예상 리스크 | ["일정 지연", "기술적 이슈"] |
 | `detailed_requirements` | X | string | 구체적 요구사항 | "반응형 디자인, 다크모드 지원" |
-| `constraints` | X | string | 제약사항 | "애자일 방법론, 2주 스프린트" |
 
-**Tip**: 선택 필드를 많이 입력할수록 AI가 더 정확하고 상세한 WBS를 생성합니다!
+**Tip**: 더 많은 상세 필드를 제공하면 AI가 더 정확한 명세서를 생성합니다.
 
 ## 스프링 서버 통합 가이드
 

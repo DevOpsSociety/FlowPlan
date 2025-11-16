@@ -17,10 +17,9 @@
 - **책임 범위**: AI 로직만 담당, 인증/DB는 스프링 서버가 처리
 
 ## 핵심 기능
-1. **직접 WBS 생성**: 프로젝트 정보 → AI가 WBS 자동 생성
-2. **마크다운 명세서 생성**: 프로젝트 정보 → 상세 마크다운 명세서
-3. **명세서 기반 WBS 생성**: 사용자 편집 마크다운 → 정확한 WBS
-4. **Flat 구조 변환**: 계층 구조 WBS → parent_task_id로 연결된 1차원 배열 (스프링 DB 호환)
+1. **마크다운 명세서 생성**: 프로젝트 정보 → 상세 마크다운 명세서 (`/generate-spec`)
+2. **명세서 기반 WBS 생성**: 사용자 편집 마크다운 → 정확한 계층 WBS (`/generate-from-spec`)
+3. **Flat 구조 변환**: 명세서로 생성된 WBS → parent_task_id로 연결된 1차원 배열 (`/generate-from-spec/flat`) (스프링 DB 호환)
 
 ## 코딩 규칙 및 가이드라인
 
@@ -66,7 +65,7 @@ app/
 
 #### 요청 모델 (request.py)
 - **필수 필드 4개**: `project_name`, `project_type`, `team_size`, `expected_duration_days`
-- **선택 필드**: 나머지는 모두 Optional
+- **선택 필드 (총 12개 계약)**: 지금 서비스는 아래 추가 선택 필드를 지원합니다: `start_date`, `end_date`, `budget`, `priority`, `stakeholders`, `deliverables`, `risks`, `detailed_requirements`.
 - Field 설명에 `[필수]` 또는 `[선택]` 태그 명시
 - 예시:
   ```python

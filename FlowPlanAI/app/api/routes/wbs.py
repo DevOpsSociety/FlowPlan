@@ -1,93 +1,13 @@
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, status, Body
-from app.models.request import WBSGenerateRequest, ProjectDuration
+from app.models.request import WBSGenerateRequest
 from app.models.response import WBSGenerateResponse
 from app.models.markdown import MarkdownSpecResponse, WBSFromSpecRequest
-from app.services.wbs_generator import WBSGenerator
 from app.services.markdown_generator import MarkdownSpecGenerator
 from app.services.wbs_from_markdown import WBSFromMarkdownGenerator
 from app.utils.wbs_converter import flatten_wbs_for_spring
 
 router = APIRouter(prefix="/wbs", tags=["WBS"])
-
-
-@router.post(
-    "/generate",
-    response_model=WBSGenerateResponse,
-    status_code=status.HTTP_200_OK,
-    summary="WBS 자동 생성",
-    description="""
-    프로젝트 정보를 기반으로 AI가 WBS(Work Breakdown Structure)를 자동 생성합니다.
-    
-    **필수 필드 (4개)**:
-    - project_name: 프로젝트명
-    - project_type: 프로젝트 주제 (웹/앱/시스템 등)
-    - team_size: 참여 인원 (명)
-    - expected_duration_days: 예상 기간 (일)
-    
-    **선택 필드**: 나머지 모든 필드는 선택사항입니다.
-    """
-)
-async def generate_wbs(
-    request: WBSGenerateRequest = Body(
-        ...,
-        examples={
-            "minimal": {
-                "summary": "최소 입력 (필수만)",
-                "description": "필수 4개 필드만 입력",
-                "value": {
-                    "project_name": "신규 앱 개발",
-                    "project_type": "모바일 앱",
-                    "team_size": 5,
-                    "expected_duration_days": 60
-                }
-            },
-            "full": {
-                "summary": "전체 입력 (모든 옵션)",
-                "description": "모든 필드를 입력한 상세 예시",
-                "value": {
-                    "project_name": "FlowPlan 모바일 앱 개발",
-                    "project_type": "모바일 앱 (iOS/Android)",
-                    "team_size": 7,
-                    "expected_duration_days": 90,
-                    "project_duration": {
-                        "start_date": "2024-01-01",
-                        "end_date": "2024-03-31"
-                    },
-                    "budget": "1억원",
-                    "priority": "높음",
-                    "stakeholders": ["CEO", "CTO", "마케팅 이사"],
-                    "deliverables": ["iOS 앱", "Android 앱", "API 문서"],
-                    "risks": ["일정 지연 가능성", "디자인 리소스 부족"],
-                    "project_purpose": "프로젝트 일정 관리 플랫폼 개발",
-                    "key_features": ["간트차트", "WBS 자동 생성", "칸반보드"],
-                    "detailed_requirements": "반응형 디자인, 다크모드 지원",
-                    "constraints": "애자일 방법론, 2주 스프린트"
-                }
-            }
-        }
-    )
-) -> WBSGenerateResponse:
-    """
-    WBS 생성 엔드포인트
-    """
-    try:
-        wbs_generator = WBSGenerator()
-        result = await wbs_generator.generate_wbs(request)
-        return result
-        
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"WBS 생성 중 데이터 검증 오류: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"WBS 생성 중 오류 발생: {str(e)}"
-        )
-
-
 @router.post(
     "/generate-spec",
     response_model=MarkdownSpecResponse,
@@ -115,6 +35,24 @@ async def generate_markdown_spec(
                     "project_type": "모바일 앱",
                     "team_size": 5,
                     "expected_duration_days": 30
+                }
+            }
+            ,
+            "full": {
+                "summary": "전체 입력 예시 (12개 필드)",
+                "value": {
+                    "project_name": "FlowPlan 플랫폼 개발",
+                    "project_type": "웹 서비스",
+                    "team_size": 7,
+                    "expected_duration_days": 90,
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-03-31",
+                    "budget": "100000000",
+                    "priority": "높음",
+                    "stakeholders": ["CEO", "CTO"],
+                    "deliverables": ["API 문서", "웹앱"],
+                    "risks": ["일정 지연", "기술 부채"],
+                    "detailed_requirements": "다크모드, 반응형 디자인, OAuth2 로그인"
                 }
             }
         }
@@ -236,23 +174,43 @@ async def generate_wbs_from_spec(
     - status → Tasks.status (항상 "할일")
     """
 )
-async def generate_wbs_from_spec_flat(request: WBSFromSpecRequest) -> Dict:
-    """마크다운 명세서로부터 WBS 생성 (Flat 구조)"""
+# `/generate-from-spec/flat` removed — flat conversion should be done on the Spring server side.
+
+
+@router.post(
+    "/generate-from-spec/flat",
+    status_code=status.HTTP_200_OK,
+    summary="마크다운으로부터 WBS 생성 (Flat 구조 - 스프링 DB용)",
+    description="""
+    마크다운 명세서로부터 WBS를 생성하고, **스프링 서버 DB 저장용 Flat 구조**로 변환합니다.
+    """
+)
+async def generate_wbs_from_spec_flat(request: WBSFromSpecRequest) -> Dict[str, Any]:
+    """마크다운 명세서로부터 WBS 생성 (Flat 구조)
+
+    반환 구조:
+    {
+      "project_name": str,
+      "total_tasks": int,
+      "total_duration_days": int,
+      "tasks": [ { task fields... } ]  # Flat 구조
+    }
+    """
     try:
-        # 1. WBS 생성
+        # 1. WBS 계층 구조 생성
         wbs_generator = WBSFromMarkdownGenerator()
         result = await wbs_generator.generate_wbs(request.markdown_spec)
-        
-        # 2. Flat 구조로 변환 (순서 보장, parent_task_id로 계층 표현)
+
+        # 2. Flat 구조로 변환 (스프링에서 저장 순서대로 parent_task_id를 DB id로 매핑)
         flat_tasks = flatten_wbs_for_spring(result.wbs_structure)
-        
+
         return {
             "project_name": result.project_name,
             "total_tasks": result.total_tasks,
             "total_duration_days": result.total_duration_days,
-            "tasks": flat_tasks  # Flat 구조 (순서대로, parent_task_id 포함)
+            "tasks": flat_tasks
         }
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -272,4 +230,7 @@ async def generate_wbs_from_spec_flat(request: WBSFromSpecRequest) -> Dict:
 )
 async def health_check():
     """WBS 서비스 상태 확인"""
-    return {"status": "healthy", "service": "WBS Generator"}
+    # Health endpoint was intentionally removed from the public API surface in favor of
+    # keeping only the three WBS-related endpoints. If you need a health check, use
+    # the application's root `/health` implemented in `app/main.py`.
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail="헬스체크 엔드포인트는 더 이상 이 라우터에서 제공되지 않습니다.")
