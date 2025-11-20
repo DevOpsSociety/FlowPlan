@@ -28,7 +28,6 @@ public class ProjectService {
   private final ProjectRepository projectRepository;
   private final UserRepository userRepository;
   private final ProjectMemberRepository projectMemberRepository;
-  private final JwtProvider jwtProvider;
   private final AiDtoMapper aiDtoMapper; // (DTO 변환기)
   private final AiService aiService;     // (AI 호출 담당)
   private final TaskService taskService;   // (WBS 저장 담당)
@@ -81,7 +80,8 @@ public class ProjectService {
 
     // 2. (WBS 저장) - TaskService를 통해 WBS 항목 저장
     taskService.saveTasksFromAiResponse(user, project, wbsResponseDto);
-
   }
+
+
 
 }

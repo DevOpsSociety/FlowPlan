@@ -3,11 +3,13 @@ package com.hanmo.flowplan.task.domain;
 import com.hanmo.flowplan.global.common.BaseTimeEntity;
 import com.hanmo.flowplan.project.domain.Project; // Project 엔티티 import (경로 확인 필요)
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
+import com.hanmo.flowplan.task.presentation.dto.UpdateTaskRequestDto;
 import com.hanmo.flowplan.user.domain.User;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime; // ERD의 DATETIME 타입에 매핑
@@ -15,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 
 @Entity
 @Getter
+@Setter
 @Table(name = "tasks") // ERD의 테이블 이름과 일치
 @NoArgsConstructor
 public class Task extends BaseTimeEntity {
@@ -73,6 +76,36 @@ public class Task extends BaseTimeEntity {
 
   public void setParent(Task parent) {
     this.parent = parent;
+  }
+
+  public void update(UpdateTaskRequestDto dto, User newAssignee, TaskStatus newStatus) {
+
+    // 1. 이름 수정
+    if (dto.name() != null && !dto.name().isBlank()) {
+      this.name = dto.name();
+    }
+
+    // 2. 날짜 수정 (간트차트)
+    if (dto.startDate() != null) {
+      this.startDate = dto.startDate();
+    }
+    if (dto.endDate() != null) {
+      this.endDate = dto.endDate();
+    }
+
+    // 3. 상태 수정 (칸반보드)
+    if (newStatus != null) {
+      this.status = newStatus;
+    }
+
+    if (dto.progress() != null) {
+      this.progress = dto.progress();
+    }
+
+    // 4. 담당자 수정
+    if (newAssignee != null) {
+      this.assignee = newAssignee;
+    }
   }
 
   private LocalDateTime parseDate(String dateString) {

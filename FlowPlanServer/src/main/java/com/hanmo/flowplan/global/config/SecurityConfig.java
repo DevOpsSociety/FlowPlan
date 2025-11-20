@@ -31,7 +31,6 @@ public class SecurityConfig {
               .authorizeHttpRequests(auth -> auth
                       .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                       // OAuth2 관련 경로는 공개
-                      .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                       .requestMatchers(
                           "/api/swagger-ui/index.html",
                           "/api/auth/google/login",

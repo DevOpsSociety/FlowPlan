@@ -3,9 +3,14 @@ package com.hanmo.flowplan.task.application;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.ProjectRepository;
+import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
+import com.hanmo.flowplan.task.application.validatpr.TaskValidator;
 import com.hanmo.flowplan.task.domain.Task;
 import com.hanmo.flowplan.task.domain.TaskRepository;
 import com.hanmo.flowplan.task.domain.TaskStatus;
+import com.hanmo.flowplan.task.presentation.dto.CreateTaskRequestDto;
+import com.hanmo.flowplan.task.presentation.dto.TaskFlatResponseDto;
+import com.hanmo.flowplan.task.presentation.dto.UpdateTaskRequestDto;
 import com.hanmo.flowplan.user.domain.User;
 import com.hanmo.flowplan.user.domain.UserRepository;
 import jakarta.transaction.Transactional;
@@ -20,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -27,9 +33,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TaskService {
 
-  private final ProjectRepository projectRepository;
   private final UserRepository userRepository;
   private final TaskRepository taskRepository;
+  private final ProjectMemberValidator projectMemberValidator;
+  private final TaskValidator taskValidator;
 
   @Transactional
   public void saveTasksFromAiResponse(User user , Project project, AiWbsResponseDto wbsResponseDto) {
@@ -83,6 +90,85 @@ public class TaskService {
   }
 
 
+  @Transactional
+  public List<TaskFlatResponseDto> getTasks(Long projectId, String googleId) {
+    // 1. 권한 검증
+    Project project = projectMemberValidator.validateMembership(googleId, projectId);
+
+    // 2. ⭐️ 프로젝트의 "모든" Task 조회
+    List<Task> allTasks = taskRepository.findAllByProjectId(project.getId());
+
+    // 3. ⭐️ DTO로 변환 (재귀 없음. Flat 리스트 -> Flat 리스트)
+    return allTasks.stream()
+        .map(TaskFlatResponseDto::from) // Task -> TaskFlatResponseDto
+        .collect(Collectors.toList());
+  }
+
+  // API 2: 신규 작업 생성
+  @Transactional
+  public TaskFlatResponseDto createTask(Long projectId, CreateTaskRequestDto dto, String googleId) {
+    // ⭐️ 3. 검증 로직 위임 (Project 객체를 반환받음)
+    Project project = projectMemberValidator.validateMembership(googleId, projectId);
+
+    // 2. ⭐️ (유효성 검증) 헬퍼 메서드 대신 Validator 호출
+    Task parentTask = taskValidator.validateAndGetParentTask(dto.parentId());
+    User assignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
+
+    TaskStatus statusEnum = convertStatus(dto.status());
+
+    // ... (Task 생성 로직) ...
+    Task task = Task.builder()
+        .project(project)
+        .name(dto.name())
+        .parent(parentTask)
+        .assignee(assignee)
+        .startDate(parseDate(dto.startDate()))
+        .endDate(parseDate(dto.endDate()))
+        .status(statusEnum) // 기본값
+        .progress(dto.progress())
+        .recommendedRole(null)
+        .build();
+
+    Task savedTask = taskRepository.save(task);
+    return TaskFlatResponseDto.from(savedTask);
+  }
+
+  @Transactional
+  public TaskFlatResponseDto updateTask(Long taskId, UpdateTaskRequestDto dto, String googleId) {
+
+    // 1. (권한 검증) Task 조회 및 사용자 권한 검증
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+    Project project = projectMemberValidator.validateMembership(googleId, task.getProject().getId());
+
+    // 2. ⭐️ (검증) 업데이트에 필요한 값들을 Validator를 통해 미리 준비
+    User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
+    TaskStatus newStatus = convertStatus(dto.status()); // DTO의 String -> Enum 변환
+
+    // 3. ⭐️ (핵심) 엔티티에게 "업데이트"를 명령 (Tell, Don't Ask)
+    //    - 서비스는 더 이상 task.setName() 등을 직접 호출하지 않음
+    task.update(dto, newAssignee, newStatus);
+
+    return TaskFlatResponseDto.from(task); // 'from' 팩토리 메서드 사용
+  }
+
+  @Transactional
+  public void deleteTask(Long taskId, String googleId) {
+
+    // 1. (엔티티 조회) 삭제할 Task를 DB에서 찾습니다.
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + taskId));
+
+    // 2. (권한 검증) 이 Task가 속한 프로젝트의 멤버가 맞는지 확인합니다.
+    //    (validateMembership은 멤버가 아니면 AccessDeniedException을 던집니다)
+    projectMemberValidator.validateMembership(googleId, task.getProject().getId());
+
+    // 3. (삭제) 권한 검증이 통과되면 엔티티를 삭제합니다.
+    //    (주의: 이 Task를 부모로 가진 자식 Task들의 'parent_id' 처리가 필요할 수 있습니다)
+    taskRepository.delete(task);
+  }
+
+
 
   // 헬퍼 메서드: 날짜 파싱 (YYYY-MM-DD)
   private LocalDateTime parseDate(String dateString) {
@@ -92,4 +178,18 @@ public class TaskService {
     // AI가 "YYYY-MM-DD" 형식으로 날짜를 반환
     return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
   }
+
+  private TaskStatus convertStatus(String statusString) {
+    if (statusString == null || statusString.isBlank()) {
+      return TaskStatus.TODO;
+    }
+    try {
+      // "todo" -> "TODO" -> TaskStatus.TODO
+      return TaskStatus.valueOf(statusString.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      // "할일" 같이 Enum에 없는 값이 들어올 경우 기본값 처리
+      return TaskStatus.TODO;
+    }
+  }
+
 }
