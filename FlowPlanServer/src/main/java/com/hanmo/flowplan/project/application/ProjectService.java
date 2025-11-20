@@ -39,7 +39,7 @@ public class ProjectService {
         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
 
     // 1. (Project 저장)
-    Project savedProject = projectRepository.save(Project.createProject(owner, createProjectRequest));
+    Project savedProject = projectRepository.save(createProjectRequest.toEntity(owner));
 
     // 프로젝트와 소유자 연결 저장
     ProjectMember projectMember = ProjectMember.builder()
