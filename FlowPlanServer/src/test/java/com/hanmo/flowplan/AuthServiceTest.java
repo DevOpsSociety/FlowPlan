@@ -43,7 +43,7 @@ class AuthServiceTest {
     void loginWithGoogle_신규사용자면_저장하고_RT저장_토큰반환() {
         // given
         given(googleIdTokenVerifierService.verify(ID_TOKEN))
-                .willReturn(new GoogleUserInfo(GOOGLE_USER_ID, EMAIL));
+                .willReturn(new GoogleUserInfo(GOOGLE_USER_ID, EMAIL, NAME));
 
         User savedUser = User.builder()
                 .googleId(GOOGLE_USER_ID)
@@ -82,7 +82,7 @@ class AuthServiceTest {
     void loginWithGoogle_기존사용자면_save_없이_RT저장_토큰반환() {
         // given
         given(googleIdTokenVerifierService.verify(ID_TOKEN))
-                .willReturn(new GoogleUserInfo(GOOGLE_USER_ID, EMAIL));
+                .willReturn(new GoogleUserInfo(GOOGLE_USER_ID, EMAIL, NAME));
 
         User existing = User.builder()
                 .googleId(GOOGLE_USER_ID)
@@ -113,8 +113,8 @@ class AuthServiceTest {
         JwtToken newTokens = new JwtToken("Bearer", newAT, newRT);
 
         willDoNothing().given(jwtProvider).assertRefreshToken(oldRT);
-        given(jwtProvider.getUsernameFromToken(oldRT)).willReturn(EMAIL);
-        given(refreshTokenStore.get(EMAIL)).willReturn(oldRT);
+        given(jwtProvider.getGoogleIdFromToken(oldRT)).willReturn(GOOGLE_USER_ID);
+        given(refreshTokenStore.get(GOOGLE_USER_ID)).willReturn(oldRT);
         given(jwtProvider.reissue(oldRT)).willReturn(newTokens);
 
         // when
@@ -132,7 +132,7 @@ class AuthServiceTest {
         // given
         String oldRT = "RT-old";
         willDoNothing().given(jwtProvider).assertRefreshToken(oldRT);
-        given(jwtProvider.getUsernameFromToken(oldRT)).willReturn(EMAIL);
+        given(jwtProvider.getGoogleIdFromToken(oldRT)).willReturn(GOOGLE_USER_ID);
         given(refreshTokenStore.get(EMAIL)).willReturn("DIFFERENT-RT");
 
         // when / then
@@ -149,7 +149,7 @@ class AuthServiceTest {
     void logout_AT있으면_RT삭제() {
         // given
         String accessToken = "AT-xxx";
-        given(jwtProvider.getUsernameFromToken(accessToken)).willReturn(EMAIL);
+        given(jwtProvider.getGoogleIdFromToken(accessToken)).willReturn(GOOGLE_USER_ID);
 
         // when
         service.logout(accessToken);
