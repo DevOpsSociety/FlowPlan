@@ -2,9 +2,8 @@ package com.hanmo.flowplan.task.application;
 
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.domain.Project;
-import com.hanmo.flowplan.project.domain.ProjectRepository;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
-import com.hanmo.flowplan.task.application.validatpr.TaskValidator;
+import com.hanmo.flowplan.task.application.validator.TaskValidator;
 import com.hanmo.flowplan.task.domain.Task;
 import com.hanmo.flowplan.task.domain.TaskRepository;
 import com.hanmo.flowplan.task.domain.TaskStatus;

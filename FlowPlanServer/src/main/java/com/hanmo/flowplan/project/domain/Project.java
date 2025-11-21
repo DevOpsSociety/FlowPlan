@@ -1,5 +1,6 @@
 package com.hanmo.flowplan.project.domain;
 
+import com.hanmo.flowplan.global.common.BaseTimeEntity;
 import com.hanmo.flowplan.project.presentation.dto.CreateProjectRequest;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.task.domain.Task;
@@ -8,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +20,7 @@ import java.util.List;
 @Getter
 @Table(name = "projects")
 @NoArgsConstructor
-public class Project {
+public class Project extends BaseTimeEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -62,6 +64,7 @@ public class Project {
   private String detailedRequirements; // 12. 더 구체적인 요구사항 (⭐️ 추가)
 
   // --- 연관 관계 ---
+  @BatchSize(size = 100)
   @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ProjectMember> projectMembers = new ArrayList<>();
 
