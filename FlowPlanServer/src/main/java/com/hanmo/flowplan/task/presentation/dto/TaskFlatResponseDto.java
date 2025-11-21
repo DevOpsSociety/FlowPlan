@@ -10,14 +10,14 @@ import java.time.LocalDateTime;
  */
 public record TaskFlatResponseDto(
     Long id, // ⭐️ 라이브러리가 사용할 "id"
-    Long parentId, // ⭐️ 라이브러리가 사용할 "parent_id"
+    Long parent, // ⭐️ 라이브러리가 사용할 "parent_id"
     String name,
-    LocalDateTime startDate,
-    LocalDateTime endDate,
+    LocalDateTime start,
+    LocalDateTime end,
+    int duration,
     int progress,
     TaskStatus status,
-    String recommendedRole, // AI 추천 역할
-    String assigneeName    // 실제 담당자 이름
+    String assignee    // 실제 담당자 이름
 ) {
 
   /**
@@ -30,7 +30,14 @@ public record TaskFlatResponseDto(
     Long parentId = (task.getParent() != null) ? task.getParent().getId() : null;
 
     // ⭐️ 담당자(User)가 할당되었으면 이름을, 없으면 null
-    String assigneeName = (task.getAssignee() != null) ? task.getAssignee().getName() : null;
+    String assignee = (task.getAssignee() != null) ? task.getAssignee().getName() : task.getRecommendedRole();
+
+    // duration 계산 (일 단위)
+    int duration = 0;
+    if (task.getStartDate() != null && task.getEndDate() != null) {
+      duration = (int) java.time.Duration.between(task.getStartDate(), task.getEndDate()).toDays();
+    }
+
 
     // ⭐️ 레코드의 생성자(Canonical Constructor) 호출
     return new TaskFlatResponseDto(
@@ -39,10 +46,10 @@ public record TaskFlatResponseDto(
         task.getName(),
         task.getStartDate(),
         task.getEndDate(),
+        duration,
         task.getProgress(),
         task.getStatus(),
-        task.getRecommendedRole(),
-        assigneeName
+        assignee
     );
   }
 }
