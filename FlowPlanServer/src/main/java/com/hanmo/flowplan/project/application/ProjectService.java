@@ -42,9 +42,9 @@ public class ProjectService {
   private final TaskService taskService;   // (WBS 저장 담당)
 
   @Transactional
-  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String googleId) {
+  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String userId) {
 
-    User owner = userValidator.validateAndGetUser(googleId);
+    User owner = userValidator.validateAndGetUser(userId);
 
     // 1. (Project 저장)
     Project savedProject = projectRepository.save(createProjectRequest.toEntity(owner));
@@ -72,9 +72,9 @@ public class ProjectService {
 
 
   @Transactional
-  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String googleId) {
+  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String userId) {
 
-    User user = userValidator.validateAndGetUser(googleId);
+    User user = userValidator.validateAndGetUser(userId);
     Project project = projectValidator.validateAndGetProject(generateWbsRequestDto.projectId());
 
     ProjectMember projectMember = projectMemberRepository.findByUserAndProject(user, project)
@@ -88,8 +88,8 @@ public class ProjectService {
   }
 
   @Transactional(readOnly = true)
-  public List<ProjectListResponse> findAllProjects(String googleId) {
-    User user = userValidator.validateAndGetUser(googleId);
+  public List<ProjectListResponse> findAllProjects(String userId) {
+    User user = userValidator.validateAndGetUser(userId);
 
     // 1. 내가 멤버로 속한 모든 프로젝트 멤버십 조회
     List<ProjectMember> memberships = projectMemberRepository.findAllByUser(user);
@@ -106,8 +106,8 @@ public class ProjectService {
   // ⭐️ [추가] API 4: 프로젝트 삭제 (Owner만 가능)
   // ============================================================
   @Transactional
-  public void deleteProject(Long projectId, String googleId) {
-    User user = userValidator.validateAndGetUser(googleId);
+  public void deleteProject(Long projectId, String userId) {
+    User user = userValidator.validateAndGetUser(userId);
     Project project = projectValidator.validateAndGetProject(projectId);
 
     // 1. 삭제 권한 확인 (소유자만 삭제 가능)
