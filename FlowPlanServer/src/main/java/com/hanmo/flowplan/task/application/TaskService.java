@@ -2,7 +2,6 @@ package com.hanmo.flowplan.task.application;
 
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.domain.Project;
-import com.hanmo.flowplan.project.domain.ProjectRepository;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.task.application.validatpr.TaskValidator;
 import com.hanmo.flowplan.task.domain.Task;
@@ -19,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +31,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskService {
 
-  private final UserRepository userRepository;
   private final TaskRepository taskRepository;
   private final ProjectMemberValidator projectMemberValidator;
   private final TaskValidator taskValidator;
@@ -171,12 +168,12 @@ public class TaskService {
 
 
   // 헬퍼 메서드: 날짜 파싱 (YYYY-MM-DD)
-  private LocalDateTime parseDate(String dateString) {
+  private LocalDate parseDate(String dateString) {
     if (dateString == null || dateString.isBlank()) {
       return null;
     }
     // AI가 "YYYY-MM-DD" 형식으로 날짜를 반환
-    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE);
   }
 
   private TaskStatus convertStatus(String statusString) {

@@ -1,5 +1,6 @@
 package com.hanmo.flowplan.task.presentation.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 // ⭐️ 모든 필드가 null일 수 있습니다.
@@ -7,8 +8,8 @@ import java.time.LocalDateTime;
 public record UpdateTaskRequestDto(
     String name,
     Long assigneeId, // User ID 또는 ProjectMember ID
-    LocalDateTime startDate,
-    LocalDateTime endDate,
+    LocalDate startDate,
+    LocalDate endDate,
     String status,
     Integer progress
 ) {}

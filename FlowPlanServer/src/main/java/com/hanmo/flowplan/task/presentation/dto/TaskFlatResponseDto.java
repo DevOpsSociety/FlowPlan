@@ -2,7 +2,10 @@ package com.hanmo.flowplan.task.presentation.dto;
 
 import com.hanmo.flowplan.task.domain.Task;
 import com.hanmo.flowplan.task.domain.TaskStatus;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * ⭐️ 작업 조회 응답용 DTO (Flat 구조, Record 형식)
@@ -12,8 +15,8 @@ public record TaskFlatResponseDto(
     Long id, // ⭐️ 라이브러리가 사용할 "id"
     Long parent, // ⭐️ 라이브러리가 사용할 "parent_id"
     String name,
-    LocalDateTime start,
-    LocalDateTime end,
+    LocalDate start,
+    LocalDate end,
     int duration,
     int progress,
     TaskStatus status,
@@ -35,7 +38,7 @@ public record TaskFlatResponseDto(
     // duration 계산 (일 단위)
     int duration = 0;
     if (task.getStartDate() != null && task.getEndDate() != null) {
-      duration = (int) java.time.Duration.between(task.getStartDate(), task.getEndDate()).toDays();
+      duration = (int) ChronoUnit.DAYS.between(task.getStartDate(), task.getEndDate()) + 1; // +1은 시작일 포함
     }
 
 

@@ -47,9 +47,9 @@ public class Task extends BaseTimeEntity {
   private String name;
 
   @Column
-  private LocalDateTime startDate; // ERD의 DATETIME 타입
+  private LocalDate startDate; // ERD의 DATETIME 타입
   @Column
-  private LocalDateTime endDate;   // ERD의 DATETIME 타입
+  private LocalDate endDate;   // ERD의 DATETIME 타입
 
   @Column
   private int progress;
@@ -59,7 +59,7 @@ public class Task extends BaseTimeEntity {
 
   @Builder
   public Task(Project project, Task parent, User assignee,
-              String recommendedRole, String name, LocalDateTime startDate, LocalDateTime endDate,
+              String recommendedRole, String name, LocalDate startDate, LocalDate endDate,
               int progress, TaskStatus status) {
     this.project = project;
     this.parent = parent;
@@ -81,7 +81,7 @@ public class Task extends BaseTimeEntity {
   public void update(UpdateTaskRequestDto dto, User newAssignee, TaskStatus newStatus) {
 
     // 1. 이름 수정
-    if (dto.name() != null && !dto.name().isBlank()) {
+    if (dto.name() != null) {
       this.name = dto.name();
     }
 
@@ -106,13 +106,6 @@ public class Task extends BaseTimeEntity {
     if (newAssignee != null) {
       this.assignee = newAssignee;
     }
-  }
-
-  private LocalDateTime parseDate(String dateString) {
-    if (dateString == null || dateString.isBlank()) {
-      return null;
-    }
-    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
   }
 
 }
