@@ -172,12 +172,12 @@ public class TaskService {
 
 
   // 헬퍼 메서드: 날짜 파싱 (YYYY-MM-DD)
-  private LocalDateTime parseDate(String dateString) {
+  private LocalDate parseDate(String dateString) {
     if (dateString == null || dateString.isBlank()) {
       return null;
     }
     // AI가 "YYYY-MM-DD" 형식으로 날짜를 반환
-    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE);
   }
 
   private TaskStatus convertStatus(String statusString) {
