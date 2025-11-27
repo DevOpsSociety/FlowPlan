@@ -2,8 +2,9 @@ package com.hanmo.flowplan.task.application;
 
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.domain.Project;
+import com.hanmo.flowplan.project.domain.ProjectRepository;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
-import com.hanmo.flowplan.task.application.validatpr.TaskValidator;
+import com.hanmo.flowplan.task.application.validator.TaskValidator;
 import com.hanmo.flowplan.task.domain.Task;
 import com.hanmo.flowplan.task.domain.TaskRepository;
 import com.hanmo.flowplan.task.domain.TaskStatus;
@@ -11,13 +12,13 @@ import com.hanmo.flowplan.task.presentation.dto.CreateTaskRequestDto;
 import com.hanmo.flowplan.task.presentation.dto.TaskFlatResponseDto;
 import com.hanmo.flowplan.task.presentation.dto.UpdateTaskRequestDto;
 import com.hanmo.flowplan.user.domain.User;
-import com.hanmo.flowplan.user.domain.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskService {
 
+  private final ProjectRepository projectRepository;
   private final TaskRepository taskRepository;
   private final ProjectMemberValidator projectMemberValidator;
   private final TaskValidator taskValidator;
@@ -88,9 +90,9 @@ public class TaskService {
 
 
   @Transactional
-  public List<TaskFlatResponseDto> getTasks(Long projectId, String googleId) {
+  public List<TaskFlatResponseDto> getTasks(Long projectId, String userId) {
     // 1. 권한 검증
-    Project project = projectMemberValidator.validateMembership(googleId, projectId);
+    Project project = projectMemberValidator.validateMembership(userId, projectId);
 
     // 2. ⭐️ 프로젝트의 "모든" Task 조회
     List<Task> allTasks = taskRepository.findAllByProjectId(project.getId());
@@ -103,9 +105,9 @@ public class TaskService {
 
   // API 2: 신규 작업 생성
   @Transactional
-  public TaskFlatResponseDto createTask(Long projectId, CreateTaskRequestDto dto, String googleId) {
+  public TaskFlatResponseDto createTask(Long projectId, CreateTaskRequestDto dto, String userId) {
     // ⭐️ 3. 검증 로직 위임 (Project 객체를 반환받음)
-    Project project = projectMemberValidator.validateMembership(googleId, projectId);
+    Project project = projectMemberValidator.validateMembership(userId, projectId);
 
     // 2. ⭐️ (유효성 검증) 헬퍼 메서드 대신 Validator 호출
     Task parentTask = taskValidator.validateAndGetParentTask(dto.parentId());
@@ -127,16 +129,17 @@ public class TaskService {
         .build();
 
     Task savedTask = taskRepository.save(task);
+    projectRepository.updateLastModifiedDate(projectId); // 프로젝트 수정일 업데이트
     return TaskFlatResponseDto.from(savedTask);
   }
 
   @Transactional
-  public TaskFlatResponseDto updateTask(Long taskId, UpdateTaskRequestDto dto, String googleId) {
+  public TaskFlatResponseDto updateTask(Long taskId, UpdateTaskRequestDto dto, String userId) {
 
     // 1. (권한 검증) Task 조회 및 사용자 권한 검증
     Task task = taskRepository.findById(taskId)
         .orElseThrow(() -> new IllegalArgumentException("Task not found"));
-    Project project = projectMemberValidator.validateMembership(googleId, task.getProject().getId());
+    Project project = projectMemberValidator.validateMembership(userId, task.getProject().getId());
 
     // 2. ⭐️ (검증) 업데이트에 필요한 값들을 Validator를 통해 미리 준비
     User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
@@ -145,12 +148,12 @@ public class TaskService {
     // 3. ⭐️ (핵심) 엔티티에게 "업데이트"를 명령 (Tell, Don't Ask)
     //    - 서비스는 더 이상 task.setName() 등을 직접 호출하지 않음
     task.update(dto, newAssignee, newStatus);
-
+    projectRepository.updateLastModifiedDate(project.getId());
     return TaskFlatResponseDto.from(task); // 'from' 팩토리 메서드 사용
   }
 
   @Transactional
-  public void deleteTask(Long taskId, String googleId) {
+  public void deleteTask(Long taskId, String userId) {
 
     // 1. (엔티티 조회) 삭제할 Task를 DB에서 찾습니다.
     Task task = taskRepository.findById(taskId)
@@ -158,11 +161,12 @@ public class TaskService {
 
     // 2. (권한 검증) 이 Task가 속한 프로젝트의 멤버가 맞는지 확인합니다.
     //    (validateMembership은 멤버가 아니면 AccessDeniedException을 던집니다)
-    projectMemberValidator.validateMembership(googleId, task.getProject().getId());
+    projectMemberValidator.validateMembership(userId, task.getProject().getId());
 
     // 3. (삭제) 권한 검증이 통과되면 엔티티를 삭제합니다.
     //    (주의: 이 Task를 부모로 가진 자식 Task들의 'parent_id' 처리가 필요할 수 있습니다)
     taskRepository.delete(task);
+    projectRepository.updateLastModifiedDate(task.getProject().getId());
   }
 
 

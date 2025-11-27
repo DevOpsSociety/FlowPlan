@@ -5,8 +5,9 @@ import com.hanmo.flowplan.ai.application.AiService;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiSpecRequestDto;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiSpecResponseDto;
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
-import com.hanmo.flowplan.global.jwt.JwtProvider;
 import com.hanmo.flowplan.project.application.dto.CreateProjectWithSpecResponse;
+import com.hanmo.flowplan.project.application.dto.ProjectListResponse;
+import com.hanmo.flowplan.project.application.validator.ProjectValidator;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.ProjectRepository;
 import com.hanmo.flowplan.project.presentation.dto.CreateProjectRequest;
@@ -14,29 +15,36 @@ import com.hanmo.flowplan.project.presentation.dto.GenerateWbsRequestDto;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.projectMember.domain.ProjectMemberRepository;
 import com.hanmo.flowplan.task.application.TaskService;
+import com.hanmo.flowplan.user.application.validator.UserValidator;
 import com.hanmo.flowplan.user.domain.User;
 import com.hanmo.flowplan.user.domain.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 
   private final ProjectRepository projectRepository;
-  private final UserRepository userRepository;
   private final ProjectMemberRepository projectMemberRepository;
+
+  private final UserValidator userValidator;
+  private final ProjectValidator projectValidator;
   private final AiDtoMapper aiDtoMapper; // (DTO 변환기)
   private final AiService aiService;     // (AI 호출 담당)
   private final TaskService taskService;   // (WBS 저장 담당)
 
   @Transactional
-  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String googleId) {
+  public CreateProjectWithSpecResponse createProjectAndGenerateSpec(CreateProjectRequest createProjectRequest, String userId) {
 
-    User owner = userRepository.findByGoogleId(googleId)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
+    User owner = userValidator.validateAndGetUser(userId);
 
     // 1. (Project 저장)
     Project savedProject = projectRepository.save(createProjectRequest.toEntity(owner));
@@ -64,24 +72,53 @@ public class ProjectService {
 
 
   @Transactional
-  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String googleId) {
+  public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String userId) {
 
-    User user = userRepository.findByGoogleId(googleId)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + googleId));
-
-    Project project = projectRepository.findById(generateWbsRequestDto.getProjectId())
-        .orElseThrow(() -> new IllegalArgumentException("Project does not exist with id: " + generateWbsRequestDto.getProjectId()));
+    User user = userValidator.validateAndGetUser(userId);
+    Project project = projectValidator.validateAndGetProject(generateWbsRequestDto.projectId());
 
     ProjectMember projectMember = projectMemberRepository.findByUserAndProject(user, project)
         .orElseThrow(() -> new IllegalArgumentException("User is not a member of the project or project does not exist."));
 
     // 1. (AI 2단계 호출) - WBS 생성
-    AiWbsResponseDto wbsResponseDto = aiService.generateWbsFromMarkdown(generateWbsRequestDto.getMarkdownContent());
+    AiWbsResponseDto wbsResponseDto = aiService.generateWbsFromMarkdown(generateWbsRequestDto.markdownContent());
 
     // 2. (WBS 저장) - TaskService를 통해 WBS 항목 저장
     taskService.saveTasksFromAiResponse(user, project, wbsResponseDto);
   }
 
+  @Transactional(readOnly = true)
+  public List<ProjectListResponse> findAllProjects(String userId) {
+    User user = userValidator.validateAndGetUser(userId);
+
+    // 1. 내가 멤버로 속한 모든 프로젝트 멤버십 조회
+    List<ProjectMember> memberships = projectMemberRepository.findAllByUser(user);
+
+    // 2. Project 엔티티 추출 -> DTO 변환 -> 최신순 정렬
+    return memberships.stream()
+        .map(ProjectMember::getProject) // Project 객체 꺼내기
+        .sorted(Comparator.comparing(Project::getUpdatedAt).reversed()) // ⭐️ 최신 수정일 순 정렬
+        .map(ProjectListResponse::from) // DTO 변환
+        .collect(Collectors.toList());
+  }
+
+  // ============================================================
+  // ⭐️ [추가] API 4: 프로젝트 삭제 (Owner만 가능)
+  // ============================================================
+  @Transactional
+  public void deleteProject(Long projectId, String userId) {
+    User user = userValidator.validateAndGetUser(userId);
+    Project project = projectValidator.validateAndGetProject(projectId);
+
+    // 1. 삭제 권한 확인 (소유자만 삭제 가능)
+    if (!project.getOwner().getId().equals(user.getId())) {
+      throw new AccessDeniedException("Only the project owner can delete this project.");
+    }
+
+    // 2. 프로젝트 삭제
+    // (CascadeType.ALL 설정에 의해 연결된 Task, ProjectMember도 함께 삭제됨)
+    projectRepository.delete(project);
+  }
 
 
 }

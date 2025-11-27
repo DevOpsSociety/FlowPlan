@@ -1,4 +1,4 @@
-package com.hanmo.flowplan.task.application.validatpr;
+package com.hanmo.flowplan.task.application.validator;
 
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
