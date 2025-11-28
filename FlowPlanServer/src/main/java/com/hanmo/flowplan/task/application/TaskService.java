@@ -85,7 +85,7 @@ public class TaskService {
     }
     // ⭐️ @Transactional이므로, 2-Pass에서 변경된 'parent' 필드는
     //    메서드가 끝날 때 자동으로 DB에 UPDATE 됩니다.
-
+    projectRepository.updateLastModifiedDate(project.getId());
   }
 
 

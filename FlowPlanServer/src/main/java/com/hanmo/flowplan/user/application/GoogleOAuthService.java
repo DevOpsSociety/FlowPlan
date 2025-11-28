@@ -34,7 +34,7 @@ public class GoogleOAuthService {
         ));
 
         JwtToken jwt = jwtProvider.issueToken(user.getGoogleId());
-        refreshTokenStore.save(user.getEmail(), jwt.refreshToken());
+        refreshTokenStore.save(user.getGoogleId(), jwt.refreshToken());
 
         return new AuthResult(user.getId(), user.getEmail(), user.getName(), isNew, jwt);
     }
@@ -48,15 +48,15 @@ public class GoogleOAuthService {
     // 재발급
     public JwtToken reissueTokens(String refreshToken) {
         jwtProvider.assertRefreshToken(refreshToken);
-        String email = jwtProvider.getGoogleIdFromToken(refreshToken);
+        String googleId = jwtProvider.getGoogleIdFromToken(refreshToken);
 
-        String stored = refreshTokenStore.get(email);
+        String stored = refreshTokenStore.get(googleId);
         if (stored == null || !stored.equals(refreshToken)) {
             throw new IllegalArgumentException("저장된 리프레시 토큰과 일치하지 않습니다.");
         }
 
         JwtToken t = jwtProvider.reissue(refreshToken);
-        refreshTokenStore.save(email, t.refreshToken());
+        refreshTokenStore.save(googleId, t.refreshToken());
         return t;
     }
 
