@@ -33,7 +33,7 @@ public class AiDtoMapper {
         project.getProjectType(), // ⭐️ projectType 필드가 없으므로 description 사용
 
         project.getTeamSize(),
-        project.getExpectedDurationDays(),
+        project.getExpectedDurationMonths(),
 
         startDateStr,
         endDateStr,

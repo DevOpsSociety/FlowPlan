@@ -40,7 +40,7 @@ public class Project extends BaseTimeEntity {
   private Integer teamSize; // 3. 참여 인원 (⭐️ 추가)
 
   @Column(name = "duration_months")
-  private Integer expectedDurationDays; // 4. 예상 기간(개월) (⭐️ 추가)
+  private Integer expectedDurationMonths; // 4. 예상 기간(개월) (⭐️ 추가)
 
   private LocalDate startDate; // 5. 시작일
   private LocalDate endDate; // 6. 마감일
@@ -72,14 +72,14 @@ public class Project extends BaseTimeEntity {
   private List<Task> tasks = new ArrayList<>();
 
   @Builder
-  public Project(User owner, String projectName, String projectType, Integer teamSize, Integer expectedDurationDays,
+  public Project(User owner, String projectName, String projectType, Integer teamSize, Integer expectedDurationMonths,
                  LocalDate startDate, LocalDate endDate, BigDecimal budget, ProjectPriority priority,
                  String stakeholders, String deliverables, String risks, String detailedRequirements) {
     this.owner = owner;
     this.projectName = projectName;
     this.projectType = projectType;
     this.teamSize = teamSize;
-    this.expectedDurationDays = expectedDurationDays;
+    this.expectedDurationMonths = expectedDurationMonths;
     this.startDate = startDate;
     this.endDate = endDate;
     this.budget = budget;
@@ -89,8 +89,4 @@ public class Project extends BaseTimeEntity {
     this.risks = risks;
     this.detailedRequirements = detailedRequirements;
   }
-
-  // com.hanmo.flowplan.project.domain.Project.java
-
-
 }

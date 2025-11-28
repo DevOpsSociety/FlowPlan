@@ -22,7 +22,7 @@ public record CreateProjectRequest(
     int teamSize,
 
     @NotNull
-    int expectedDurationDays,
+    int expectedDurationMonths,
 
     String startDate,
     String endDate,
@@ -64,7 +64,7 @@ public record CreateProjectRequest(
         .projectName(this.projectName)
         .projectType(this.projectType) // 주제를 description에 저장
         .teamSize(this.teamSize)
-        .expectedDurationDays(this.expectedDurationDays / 30) // 일 -> 개월 (단순 계산)
+        .expectedDurationMonths(this.expectedDurationMonths) // 일 -> 개월 (단순 계산)
         .startDate(start)
         .endDate(end)
         .budget(this.budget)
