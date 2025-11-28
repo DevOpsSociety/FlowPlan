@@ -1,5 +1,7 @@
 package com.hanmo.flowplan.task.application.validator;
 
+import com.hanmo.flowplan.global.error.ErrorCode;
+import com.hanmo.flowplan.global.error.exception.BusinessException;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.task.domain.Task;
@@ -26,7 +28,7 @@ public class TaskValidator {
 
     // 부모 ID가 있는데 DB에 존재하지 않으면 예외 발생
     return taskRepository.findById(parentId)
-        .orElseThrow(() -> new IllegalArgumentException("Parent task not found with id: " + parentId));
+        .orElseThrow(() -> new BusinessException(ErrorCode.TASK_NOT_FOUND));
   }
 
   public User validateAndGetAssignee(Project project, Long assigneeId) {
@@ -36,10 +38,10 @@ public class TaskValidator {
 
     // 1. User 존재 확인
     User assignee = userRepository.findById(assigneeId)
-        .orElseThrow(() -> new IllegalArgumentException("Assignee user not found with id: " + assigneeId));
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     // 2. ⭐️ Project 멤버 검증 로직 위임
-    projectMemberValidator.validateMembership(assignee.getGoogleId(), project.getId());
+    projectMemberValidator.validateMembership(assignee, project);
 
     return assignee; // 모든 검증 통과
   }
