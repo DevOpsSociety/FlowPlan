@@ -27,14 +27,19 @@ public class AiDtoMapper {
         ? project.getPriority().getKoreanName() // ⬅️ switch문이 사라짐!
         : null;
 
+    String startDateStr = (project.getStartDate() != null) ? project.getStartDate().toString() : null;
+
+    // ⭐️ 수정: endDate도 동일하게 null 확인
+    String endDateStr = (project.getEndDate() != null) ? project.getEndDate().toString() : null;
+
     return new AiSpecRequestDto(
         project.getProjectName(),
         project.getProjectType(), // ⭐️ projectType 필드가 없으므로 description 사용
         project.getTeamSize(),
         project.getExpectedDurationDays(),
 
-        project.getStartDate().toString(),
-        project.getEndDate().toString(),
+        startDateStr,
+        endDateStr,
         project.getBudget() != null ? project.getBudget().toString() : null,
         priorityKorean,
         stakeholdersList,
