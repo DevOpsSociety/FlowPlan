@@ -40,7 +40,7 @@ public class TaskController {
     return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
   }
 
-  @PatchMapping("/tasks/{taskId}")
+  @PatchMapping("/{taskId}")
   public ResponseEntity<TaskFlatResponseDto> updateTask(@PathVariable Long taskId,
                                                         @RequestBody UpdateTaskRequestDto requestDto,
                                                         @CurrentUserId String userId) {
@@ -49,7 +49,7 @@ public class TaskController {
     return ResponseEntity.ok(updatedTask);
   }
 
-  @DeleteMapping("/tasks/{taskId}")
+  @DeleteMapping("/{taskId}")
   public ResponseEntity<Void> deleteTask(@PathVariable Long taskId,
                                          @CurrentUserId String userId) {
     // TaskService에 권한 검증 및 삭제를 위임
