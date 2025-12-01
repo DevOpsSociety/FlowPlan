@@ -9,6 +9,7 @@ import com.hanmo.flowplan.task.domain.Task;
 import com.hanmo.flowplan.task.domain.TaskRepository;
 import com.hanmo.flowplan.task.domain.TaskStatus;
 import com.hanmo.flowplan.task.presentation.dto.CreateTaskRequestDto;
+import com.hanmo.flowplan.task.presentation.dto.ProjectWithTasksResponseDto;
 import com.hanmo.flowplan.task.presentation.dto.TaskFlatResponseDto;
 import com.hanmo.flowplan.task.presentation.dto.UpdateTaskRequestDto;
 import com.hanmo.flowplan.user.domain.User;
@@ -90,17 +91,20 @@ public class TaskService {
 
 
   @Transactional
-  public List<TaskFlatResponseDto> getTasks(Long projectId, String userId) {
+  public ProjectWithTasksResponseDto getProjectWithTasks(Long projectId, String userId) {
     // 1. 권한 검증
     Project project = projectMemberValidator.validateMembership(userId, projectId);
 
     // 2. ⭐️ 프로젝트의 "모든" Task 조회
     List<Task> allTasks = taskRepository.findAllByProjectId(project.getId());
 
-    // 3. ⭐️ DTO로 변환 (재귀 없음. Flat 리스트 -> Flat 리스트)
-    return allTasks.stream()
-        .map(TaskFlatResponseDto::from) // Task -> TaskFlatResponseDto
+    // 3. Task 엔티티 리스트 -> Task DTO 리스트 변환
+    List<TaskFlatResponseDto> taskDtos = allTasks.stream()
+        .map(TaskFlatResponseDto::from)
         .collect(Collectors.toList());
+
+    // 3. ⭐️ DTO로 변환 (재귀 없음. Flat 리스트 -> Flat 리스트)
+    return ProjectWithTasksResponseDto.of(project, taskDtos);
   }
 
   // API 2: 신규 작업 생성

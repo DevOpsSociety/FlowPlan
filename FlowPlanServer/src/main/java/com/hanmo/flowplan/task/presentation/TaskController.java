@@ -4,6 +4,7 @@ import com.hanmo.flowplan.global.annotation.CurrentUserId;
 import com.hanmo.flowplan.task.application.TaskService;
 // ⭐️ 1. DTO 클래스들을 import 합니다.
 import com.hanmo.flowplan.task.presentation.dto.CreateTaskRequestDto;
+import com.hanmo.flowplan.task.presentation.dto.ProjectWithTasksResponseDto;
 import com.hanmo.flowplan.task.presentation.dto.TaskFlatResponseDto;
 import com.hanmo.flowplan.task.presentation.dto.UpdateTaskRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +23,10 @@ public class TaskController {
   private final TaskService taskService;
 
   @GetMapping("/projects/{projectId}/tasks")
-  public ResponseEntity<List<TaskFlatResponseDto>> getTasks(@PathVariable Long projectId,
+  public ResponseEntity<ProjectWithTasksResponseDto> getTasks(@PathVariable Long projectId,
                                                             @CurrentUserId String userId) {
     // TaskService에 권한 검증 및 조회를 위임
-    List<TaskFlatResponseDto> tasks = taskService.getTasks(projectId, userId);
+    ProjectWithTasksResponseDto tasks = taskService.getProjectWithTasks(projectId, userId);
     return ResponseEntity.ok(tasks);
   }
 
