@@ -151,6 +151,8 @@ public class TaskService {
     // 3. ⭐️ (핵심) 엔티티에게 "업데이트"를 명령 (Tell, Don't Ask)
     //    - 서비스는 더 이상 task.setName() 등을 직접 호출하지 않음
     task.update(dto, newAssignee, newStatus);
+    taskRepository.saveAndFlush(task);
+
     projectRepository.updateLastModifiedDate(project.getId());
     return TaskFlatResponseDto.from(task); // 'from' 팩토리 메서드 사용
   }
@@ -169,6 +171,7 @@ public class TaskService {
     // 3. (삭제) 권한 검증이 통과되면 엔티티를 삭제합니다.
     //    (주의: 이 Task를 부모로 가진 자식 Task들의 'parent_id' 처리가 필요할 수 있습니다)
     taskRepository.delete(task);
+    taskRepository.flush();
     projectRepository.updateLastModifiedDate(task.getProject().getId());
   }
 
@@ -179,8 +182,16 @@ public class TaskService {
     if (dateString == null || dateString.isBlank()) {
       return null;
     }
-    // AI가 "YYYY-MM-DD" 형식으로 날짜를 반환
-    return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE);
+    try {
+      // ⭐️ [핵심 수정] 시간 정보(T...)가 붙어있으면 앞의 10자리(YYYY-MM-DD)만 잘라냅니다.
+      if (dateString.length() > 10) {
+        dateString = dateString.substring(0, 10);
+      }
+      return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE);
+    } catch (Exception e) {
+      // 파싱 실패 시 null 반환 (로그를 남겨도 좋습니다)
+      return null;
+    }
   }
 
   private TaskStatus convertStatus(String statusString) {
