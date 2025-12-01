@@ -130,12 +130,12 @@ cp .env.example .env
 # .env 파일 편집 후 GROQ_API_KEY 추가
 ```
 
-#### Linux/macOS
+#### Linux / macOS (bash/zsh)
 ```bash
 # 1. 가상환경 생성
 python3 -m venv venv
 
-# 2. 가상환경 활성화
+# 2. 가상환경 활성화 (bash/zsh)
 source venv/bin/activate
 
 # 3. 의존성 설치
@@ -143,6 +143,26 @@ pip install -r requirements.txt
 
 # 4. 환경 변수 설정
 cp .env.example .env
+# .env 파일 편집 후 GROQ_API_KEY 추가
+```
+
+#### Windows PowerShell (또는 PowerShell 사용 시)
+```powershell
+# 1. 가상환경 생성
+python -m venv venv
+
+# 2. 가상환경 활성화 (PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# 만약 실행 정책 때문에 스크립트 실행이 차단되면 (일시적으로 허용)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
+.\venv\Scripts\Activate.ps1
+
+# 3. 의존성 설치
+pip install -r requirements.txt
+
+# 4. 환경 변수 설정
+Copy-Item .env.example .env
 # .env 파일 편집 후 GROQ_API_KEY 추가
 ```
 

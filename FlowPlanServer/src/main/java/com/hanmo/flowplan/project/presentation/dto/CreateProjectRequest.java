@@ -1,6 +1,5 @@
 package com.hanmo.flowplan.project.presentation.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.ProjectPriority;
 import com.hanmo.flowplan.user.domain.User;

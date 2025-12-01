@@ -37,6 +37,8 @@ dependencies {
     // Google ID Token 검증
     implementation 'com.google.api-client:google-api-client:2.6.0'
     implementation 'com.google.http-client:google-http-client-jackson2:1.43.3'
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
