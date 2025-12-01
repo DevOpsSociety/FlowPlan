@@ -2,7 +2,7 @@ package com.hanmo.flowplan.task.application;
 
 import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.domain.Project;
-import com.hanmo.flowplan.project.domain.ProjectRepository;
+import com.hanmo.flowplan.project.domain.repository.ProjectRepository;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.task.application.validator.TaskValidator;
 import com.hanmo.flowplan.task.domain.Task;
@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;

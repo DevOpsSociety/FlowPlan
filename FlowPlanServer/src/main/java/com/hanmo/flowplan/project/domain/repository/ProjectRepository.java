@@ -1,5 +1,6 @@
-package com.hanmo.flowplan.project.domain;
+package com.hanmo.flowplan.project.domain.repository;
 
+import com.hanmo.flowplan.project.domain.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
