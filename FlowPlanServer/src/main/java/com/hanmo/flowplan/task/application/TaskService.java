@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -141,8 +140,7 @@ public class TaskService {
   public TaskFlatResponseDto updateTask(Long taskId, UpdateTaskRequestDto dto, String userId) {
 
     // 1. (권한 검증) Task 조회 및 사용자 권한 검증
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+    Task task = taskValidator.validateAndGetTask(taskId);
     Project project = projectMemberValidator.validateMembership(userId, task.getProject().getId());
 
     // 2. ⭐️ (검증) 업데이트에 필요한 값들을 Validator를 통해 미리 준비

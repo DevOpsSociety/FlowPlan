@@ -21,6 +21,11 @@ public class TaskValidator {
   private final UserRepository userRepository;
   private final ProjectMemberValidator projectMemberValidator; // ⭐️ 기존 검증기 재사용
 
+  public Task validateAndGetTask(Long taskId) {
+    return taskRepository.findById(taskId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.TASK_NOT_FOUND));
+  }
+
   public Task validateAndGetParentTask(Long parentId) {
     if (parentId == null) {
       return null; // 부모가 없는 최상위 작업 (정상)
