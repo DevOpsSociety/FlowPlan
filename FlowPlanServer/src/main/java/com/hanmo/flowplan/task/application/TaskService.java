@@ -132,6 +132,12 @@ public class TaskService {
         .build();
 
     Task savedTask = taskRepository.save(task);
+
+    if (savedTask.getParent() != null) {
+      // DB에 내 존재를 먼저 알리고(Flush) -> 부모 재계산
+      taskRepository.flush();
+      calculateParentProgress(savedTask.getParent());
+    }
     projectRepository.updateLastModifiedDate(projectId); // 프로젝트 수정일 업데이트
     return TaskFlatResponseDto.from(savedTask);
   }
@@ -143,15 +149,19 @@ public class TaskService {
     Task task = taskValidator.validateAndGetTask(taskId);
     Project project = projectMemberValidator.validateMembership(userId, task.getProject().getId());
 
-    // 2. ⭐️ (검증) 업데이트에 필요한 값들을 Validator를 통해 미리 준비
+    // 2.(검증) 업데이트에 필요한 값들을 Validator를 통해 미리 준비
     User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
     TaskStatus newStatus = convertStatus(dto.status()); // DTO의 String -> Enum 변환
 
-    // 3. ⭐️ (핵심) 엔티티에게 "업데이트"를 명령 (Tell, Don't Ask)
-    //    - 서비스는 더 이상 task.setName() 등을 직접 호출하지 않음
+    // 3.엔티티에게 "업데이트"를 명령 (Tell, Don't Ask)
     task.update(dto, newAssignee, newStatus);
-    taskRepository.saveAndFlush(task);
+    //[하향 전파] 내가 DONE이 되었다면, 내 자식들도 모두 DONE으로
+    if (task.getStatus() == TaskStatus.DONE) {propagateDownToChildren(task);}
+    //[상향 계산] 내 진행률이 변했으니, 부모의 진행률을 재계산
+    if (task.getParent() != null) {calculateParentProgress(task.getParent());}
 
+    // 4. (저장 및 반환) 변경된 엔티티 저장 및 DTO 변환 반환
+    taskRepository.saveAndFlush(task);
     projectRepository.updateLastModifiedDate(project.getId());
     return TaskFlatResponseDto.from(task); // 'from' 팩토리 메서드 사용
   }
@@ -160,20 +170,59 @@ public class TaskService {
   public void deleteTask(Long taskId, String userId) {
 
     // 1. (엔티티 조회) 삭제할 Task를 DB에서 찾습니다.
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + taskId));
+    Task task = taskValidator.validateAndGetTask(taskId);
 
     // 2. (권한 검증) 이 Task가 속한 프로젝트의 멤버가 맞는지 확인합니다.
     //    (validateMembership은 멤버가 아니면 AccessDeniedException을 던집니다)
     projectMemberValidator.validateMembership(userId, task.getProject().getId());
 
+    Task parent = task.getParent(); //삭제 전 부모를 기억해둠
     // 3. (삭제) 권한 검증이 통과되면 엔티티를 삭제합니다.
     //    (주의: 이 Task를 부모로 가진 자식 Task들의 'parent_id' 처리가 필요할 수 있습니다)
     taskRepository.delete(task);
     taskRepository.flush();
+
+    if (parent != null) {
+      calculateParentProgress(parent);
+    }
+
     projectRepository.updateLastModifiedDate(task.getProject().getId());
   }
 
+
+  private void propagateDownToChildren(Task parent) {
+    List<Task> children = taskRepository.findAllByParentId(parent.getId());
+
+    for (Task child : children) {
+      child.forceDone(); // 상태 DONE, 진행률 100%
+      // 자식의 자식도 있을 수 있으므로 재귀 호출
+      propagateDownToChildren(child);
+    }
+    taskRepository.saveAll(children); // 변경된 자식들 저장
+  }
+
+  /**
+   * [상향 계산] 자식들의 진행률 평균을 내서 부모에게 반영 (재귀)
+   */
+  private void calculateParentProgress(Task parent) {
+    // 1. 형제들(부모의 모든 자식) 조회
+    List<Task> children = taskRepository.findAllByParentId(parent.getId());
+
+    if (children.isEmpty()) return;
+
+    // 2. 평균 계산
+    double sum = children.stream().mapToInt(Task::getProgress).sum();
+    int avgProgress = (int) Math.round(sum / children.size()); // 반올림
+
+    // 3. 부모 업데이트
+    parent.updateProgressFromChildren(avgProgress);
+    taskRepository.save(parent);
+
+    // 4. 부모의 부모(할아버지)도 영향받을 수 있으므로 재귀 호출
+    if (parent.getParent() != null) {
+      calculateParentProgress(parent.getParent());
+    }
+  }
 
 
   // 헬퍼 메서드: 날짜 파싱 (YYYY-MM-DD)

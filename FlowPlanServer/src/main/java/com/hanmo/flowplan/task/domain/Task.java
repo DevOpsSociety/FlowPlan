@@ -14,6 +14,8 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime; // ERD의 DATETIME 타입에 매핑
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -30,7 +32,7 @@ public class Task extends BaseTimeEntity {
   @JoinColumn(name = "project_id", nullable = false) // 'project_id' 컬럼, NN (Not Null)
   private Project project;
 
-  // 'parent_id' (대분류/소분류)
+  // 'parent_id' (상위/하위)
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "parent_id")
   private Task parent; // 자기 자신을 참조 (셀프 조인)
@@ -56,6 +58,9 @@ public class Task extends BaseTimeEntity {
 
   @Enumerated(EnumType.STRING)
   private TaskStatus status;
+
+  @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Task> children = new ArrayList<>();
 
   @Builder
   public Task(Project project, Task parent, User assignee,
