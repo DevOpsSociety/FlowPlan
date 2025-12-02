@@ -71,6 +71,9 @@ public class Project extends BaseTimeEntity {
   @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Task> tasks = new ArrayList<>();
 
+  @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<ProjectInvitation> projectInvitations = new ArrayList<>();
+
   @Builder
   public Project(User owner, String projectName, String projectType, Integer teamSize, Integer expectedDurationMonths,
                  LocalDate startDate, LocalDate endDate, BigDecimal budget, ProjectPriority priority,

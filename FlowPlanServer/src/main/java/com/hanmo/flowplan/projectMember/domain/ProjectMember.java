@@ -26,8 +26,8 @@ public class ProjectMember extends BaseTimeEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  // TODO: 이 멤버의 프로젝트 내 "역할" (예: "PL", "개발자")을 저장할 컬럼 추가 가능
-  // private String projectRole;
+  // TODO: 이 멤버의 프로젝트 내 권한
+  // private ProjectRole projectRole;
 
   @Builder
   public ProjectMember(Project project, User user) {
