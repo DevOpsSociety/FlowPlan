@@ -144,12 +144,12 @@ class GeminiService:
 
 필수 규칙:
 1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
-2. task_id는 "1.0", "1.1", "1.1.1" 형식 (최대 3단계)
+2. task_id는 "1.0", "1.1" 형식 (최대 2단계). 1.1.1과 같은 3단계 작업은 절대 생성하지 마세요.
 3. progress는 항상 0
 4. status는 항상 "할일"
 5. duration_days는 정수(integer)
 6. start_date, end_date는 "YYYY-MM-DD" 형식
-7. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+7. subtasks는 배열 (하위 작업이 없으면 빈 배열 []). 단, 2단계 작업(1.1 등)의 subtasks는 항상 비어 있어야 합니다.
 8. JSON만 출력 (설명, 코드블록 금지)
 
 JSON 스키마:
@@ -199,11 +199,11 @@ JSON 스키마:
 
 필수 규칙:
 1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
-2. task_id는 "1.0", "1.1", "1.1.1" 형식
+2. task_id는 "1.0", "1.1" 형식 (최대 2단계). 1.1.1과 같은 3단계 작업은 절대 생성하지 마세요.
 3. progress는 항상 0
 4. status는 항상 "할일"
 5. duration_days는 정수(integer)
-6. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+6. subtasks는 배열 (하위 작업이 없으면 빈 배열 []). 단, 2단계 작업(1.1 등)의 subtasks는 항상 비어 있어야 합니다.
 7. JSON 코드블록(```)으로 감싸지 말고 순수 JSON만 출력
 
 JSON 스키마 예시:
