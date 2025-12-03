@@ -12,8 +12,10 @@ import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.repository.ProjectRepository;
 import com.hanmo.flowplan.project.presentation.dto.CreateProjectRequest;
 import com.hanmo.flowplan.project.presentation.dto.GenerateWbsRequestDto;
+import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.projectMember.domain.ProjectMemberRepository;
+import com.hanmo.flowplan.projectMember.domain.ProjectRole;
 import com.hanmo.flowplan.task.application.TaskService;
 import com.hanmo.flowplan.user.application.validator.UserValidator;
 import com.hanmo.flowplan.user.domain.User;
@@ -35,6 +37,7 @@ public class ProjectService {
 
   private final UserValidator userValidator;
   private final ProjectValidator projectValidator;
+  private final ProjectMemberValidator projectMemberValidator;
   private final AiDtoMapper aiDtoMapper; // (DTO 변환기)
   private final AiService aiService;     // (AI 호출 담당)
   private final TaskService taskService;   // (WBS 저장 담당)
@@ -51,6 +54,7 @@ public class ProjectService {
     ProjectMember projectMember = ProjectMember.builder()
         .user(savedProject.getOwner())
         .project(savedProject)
+        .role(ProjectRole.OWNER)
         .build();
 
     projectMemberRepository.save(projectMember);
@@ -72,17 +76,16 @@ public class ProjectService {
   @Transactional
   public void generateWbsAndSaveTasks(GenerateWbsRequestDto generateWbsRequestDto, String userId) {
 
-    User user = userValidator.validateAndGetUser(userId);
-    Project project = projectValidator.validateAndGetProject(generateWbsRequestDto.projectId());
-
-    ProjectMember projectMember = projectMemberRepository.findByUserAndProject(user, project)
-        .orElseThrow(() -> new IllegalArgumentException("User is not a member of the project or project does not exist."));
-
+    ProjectMember member = projectMemberValidator.validatePermission(
+        userId,
+        generateWbsRequestDto.projectId(),
+        ProjectRole.EDITOR
+    );
     // 1. (AI 2단계 호출) - WBS 생성
     AiWbsResponseDto wbsResponseDto = aiService.generateWbsFromMarkdown(generateWbsRequestDto.markdownContent());
 
     // 2. (WBS 저장) - TaskService를 통해 WBS 항목 저장
-    taskService.saveTasksFromAiResponse(user, project, wbsResponseDto);
+    taskService.saveTasksFromAiResponse(member.getUser(), member.getProject(), wbsResponseDto);
   }
 
   @Transactional(readOnly = true)
@@ -105,17 +108,11 @@ public class ProjectService {
   // ============================================================
   @Transactional
   public void deleteProject(Long projectId, String userId) {
-    User user = userValidator.validateAndGetUser(userId);
-    Project project = projectValidator.validateAndGetProject(projectId);
-
-    // 1. 삭제 권한 확인 (소유자만 삭제 가능)
-    if (!project.getOwner().getId().equals(user.getId())) {
-      throw new AccessDeniedException("Only the project owner can delete this project.");
-    }
+    ProjectMember member = projectMemberValidator.validatePermission(userId, projectId, ProjectRole.OWNER);
 
     // 2. 프로젝트 삭제
     // (CascadeType.ALL 설정에 의해 연결된 Task, ProjectMember도 함께 삭제됨)
-    projectRepository.delete(project);
+    projectRepository.delete(member.getProject());
   }
 
 
