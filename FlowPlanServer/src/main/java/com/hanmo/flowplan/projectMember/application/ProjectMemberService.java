@@ -4,6 +4,7 @@ import com.hanmo.flowplan.global.error.ErrorCode;
 import com.hanmo.flowplan.global.error.exception.BusinessException;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.repository.ProjectRepository;
+import com.hanmo.flowplan.projectMember.presentation.dto.ProjectMemberResponse;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.projectMember.domain.ProjectMemberRepository;
@@ -13,6 +14,9 @@ import com.hanmo.flowplan.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,4 +63,68 @@ public class ProjectMemberService {
     // 4. EDITOR로 승급
     targetMember.updateRole(ProjectRole.EDITOR);
   }
+
+  // ============================================================
+  // 1. 프로젝트 멤버 조회 (Read)
+  // ============================================================
+  public List<ProjectMemberResponse> getProjectMembers(Long projectId, String userId) {
+    // 1. 권한 검증: 최소 VIEWER 권한이 있는지 확인
+    // (조회 API이므로, validatePermission의 반환값(ProjectMember)은 사용하지 않음)
+    projectMemberValidator.validatePermission(userId, projectId, ProjectRole.VIEWER);
+
+    // 2. 프로젝트 ID로 모든 멤버 조회 (ProjectMember 엔티티의 fetch join 설정 권장)
+    List<ProjectMember> members = projectMemberRepository.findAllByProjectId(projectId);
+
+    // 3. DTO 변환
+    return members.stream()
+        .map(ProjectMemberResponse::from)
+        .collect(Collectors.toList());
+  }
+
+  // ============================================================
+  // 2. 멤버 추방 (Kick) - OWNER 전용
+  // ============================================================
+  @Transactional
+  public void kickMember(Long projectId, Long memberIdToKick, String ownerGoogleId) {
+    // 1. 요청자(Owner) 권한 검증: OWNER만 가능
+    projectMemberValidator.validatePermission(ownerGoogleId, projectId, ProjectRole.OWNER);
+
+    // 2. 추방 대상 멤버 조회
+    ProjectMember targetMember = projectMemberRepository.findById(memberIdToKick)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "추방할 멤버를 찾을 수 없습니다."));
+
+    // 3. 자기 자신 추방 금지 로직
+    if (targetMember.getUser().getGoogleId().equals(ownerGoogleId)) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "자기 자신은 추방할 수 없습니다.");
+    }
+
+    // 4. 추방 실행
+    projectMemberRepository.delete(targetMember);
+  }
+
+  // ============================================================
+  // 3. 프로젝트 나가기 (Leave) - OWNER 제외
+  // ============================================================
+  @Transactional
+  public void leaveProject(Long projectId, String userGoogleId) {
+    // 1. 유저 조회
+    User user = userValidator.validateAndGetUser(userGoogleId);
+
+    // 2. 프로젝트 조회
+    Project project = projectRepository.findById(projectId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
+
+    // 3. 멤버십 조회
+    ProjectMember member = projectMemberRepository.findByUserAndProject(user, project)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_PROJECT_MEMBER));
+
+    // 4. OWNER는 나가기 금지 (Owner는 deleteProject로 프로젝트 자체를 삭제해야 함)
+    if (member.getProjectRole() == ProjectRole.OWNER) {
+      throw new BusinessException(ErrorCode.ACCESS_DENIED, "프로젝트 소유자는 나갈 수 없습니다. 프로젝트를 삭제하거나 소유권을 이전해야 합니다.");
+    }
+
+    // 5. 나가기 실행
+    projectMemberRepository.delete(member);
+  }
+
 }
