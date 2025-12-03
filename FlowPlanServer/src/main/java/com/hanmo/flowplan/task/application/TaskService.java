@@ -108,7 +108,7 @@ public class TaskService {
     Project project = member.getProject();
 
     Task parentTask = taskValidator.validateAndGetParentTask(dto.parentId());
-    User assignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
+    User assignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus statusEnum = convertStatus(dto.status());
 
     Task task = Task.builder()
@@ -145,7 +145,7 @@ public class TaskService {
     Project project = task.getProject();
     projectMemberValidator.validatePermission(userId, project.getId(), ProjectRole.EDITOR);
 
-    User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeId());
+    User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus newStatus = convertStatus(dto.status());
 
     task.update(dto, newAssignee, newStatus);
