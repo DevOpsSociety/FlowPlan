@@ -20,7 +20,7 @@ public record TaskFlatResponseDto(
     int duration,
     int progress,
     TaskStatus status,
-    String assignee    // 실제 담당자 이름
+    String assigneeEmail    // 실제 담당자 이름
 ) {
 
   /**

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 // (Gantt는 startDate/endDate만, Kanban은 status만 보냄)
 public record UpdateTaskRequestDto(
     String name,
-    Long assigneeId, // User ID 또는 ProjectMember ID
+    String assigneeEmail,
     LocalDate startDate,
     LocalDate endDate,
     String status,

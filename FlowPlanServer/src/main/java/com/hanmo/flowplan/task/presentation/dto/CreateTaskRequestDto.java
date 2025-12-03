@@ -12,7 +12,7 @@ public record CreateTaskRequestDto(
     // ⭐️ 부모 Task ID (Task 엔티티의 PK, 최상위 작업이면 null)
     Long parentId,
     // ⭐️ 담당자 ID (User 엔티티의 PK, 할당 안 하면 null)
-    Long assigneeId,
+    String assigneeEmail,
 
     String startDate,
     String endDate,
