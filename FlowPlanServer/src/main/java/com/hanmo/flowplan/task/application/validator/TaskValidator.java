@@ -36,19 +36,19 @@ public class TaskValidator {
         .orElseThrow(() -> new BusinessException(ErrorCode.TASK_NOT_FOUND));
   }
 
-  public User validateAndGetAssignee(Project project, Long assigneeId) {
-    if (assigneeId == null) {
-      return null; // 담당자가 없음 (정상)
+  public User validateAndGetAssignee(Project project, String assigneeEmail) {
+    if (assigneeEmail == null || assigneeEmail.isBlank()) {
+      return null;
     }
 
-    // 1. User 존재 확인
-    User assignee = userRepository.findById(assigneeId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    // 1. User 존재 확인 (이메일로 찾음)
+    User assignee = userRepository.findByEmail(assigneeEmail)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "할당하려는 이메일로 가입된 유저를 찾을 수 없습니다."));
 
-    // 2. ⭐️ Project 멤버 검증 로직 위임
+    // 2. Project 멤버 검증 로직 위임
     projectMemberValidator.validateMembership(assignee, project);
 
-    return assignee; // 모든 검증 통과
+    return assignee;
   }
 
 }

@@ -8,6 +8,7 @@ import com.hanmo.flowplan.project.domain.repository.ProjectInvitationRepository;
 import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.projectMember.domain.ProjectMemberRepository;
+import com.hanmo.flowplan.projectMember.domain.ProjectRole;
 import com.hanmo.flowplan.user.application.validator.UserValidator;
 import com.hanmo.flowplan.user.domain.User;
 import com.hanmo.flowplan.user.domain.UserRepository;
@@ -77,6 +78,7 @@ public class InvitationService {
     ProjectMember newMember = ProjectMember.builder()
         .project(invitation.getProject())
         .user(user)
+        .role(ProjectRole.VIEWER)
         .build();
     projectMemberRepository.save(newMember);
 
