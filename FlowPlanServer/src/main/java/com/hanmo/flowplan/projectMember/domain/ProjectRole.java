@@ -11,7 +11,7 @@ public enum ProjectRole {
   OWNER("소유자", 3),
   EDITOR("편집자", 2),
   VIEWER("뷰어", 1),
-  PENDING("대기중", 0);
+  PENDING("승인 대기중", 1);
 
   private final String description;
   private final int level;
