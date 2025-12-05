@@ -16,11 +16,13 @@ import com.hanmo.flowplan.project.application.dto.ProjectListResponse;
 import com.hanmo.flowplan.project.application.validator.ProjectValidator;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.ProjectPriority;
-import com.hanmo.flowplan.project.domain.ProjectRepository;
+import com.hanmo.flowplan.project.domain.repository.ProjectRepository;
 import com.hanmo.flowplan.project.presentation.dto.CreateProjectRequest;
 import com.hanmo.flowplan.project.presentation.dto.GenerateWbsRequestDto;
+import com.hanmo.flowplan.projectMember.application.validator.ProjectMemberValidator;
 import com.hanmo.flowplan.projectMember.domain.ProjectMember;
 import com.hanmo.flowplan.projectMember.domain.ProjectMemberRepository;
+import com.hanmo.flowplan.projectMember.domain.ProjectRole;
 import com.hanmo.flowplan.task.application.TaskService;
 import com.hanmo.flowplan.user.application.validator.UserValidator;
 import com.hanmo.flowplan.user.domain.User;
@@ -28,7 +30,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -63,6 +64,9 @@ public class ProjectServiceTest {
     @InjectMocks
     ProjectService projectService;
 
+    @Mock
+    ProjectMemberValidator projectMemberValidator;
+
     @Test
     void 프로젝트_생성_및_스펙_생성_테스트() {
         // given
@@ -94,7 +98,7 @@ public class ProjectServiceTest {
                 .projectName("projectName")
                 .projectType("projectType")
                 .teamSize(5)
-                .expectedDurationDays(3)
+                .expectedDurationMonths(3)
                 .startDate(LocalDate.parse("2025-09-01"))
                 .endDate(LocalDate.parse("2025-12-01"))
                 .budget(new BigDecimal("1000000"))
@@ -142,7 +146,8 @@ public class ProjectServiceTest {
         Long projectId = 1L;
         String markdownContent = "markdownContent";
 
-        GenerateWbsRequestDto generateWbsRequestDto = new GenerateWbsRequestDto(projectId, markdownContent);
+        GenerateWbsRequestDto generateWbsRequestDto =
+                new GenerateWbsRequestDto(projectId, markdownContent);
 
         User user = User.builder()
                 .email("testUser")
@@ -155,7 +160,7 @@ public class ProjectServiceTest {
                 .projectName("projectName")
                 .projectType("projectType")
                 .teamSize(5)
-                .expectedDurationDays(3)
+                .expectedDurationMonths(3)
                 .startDate(LocalDate.parse("2025-09-01"))
                 .endDate(LocalDate.parse("2025-12-01"))
                 .budget(new BigDecimal("1000000"))
@@ -171,20 +176,22 @@ public class ProjectServiceTest {
         ProjectMember projectMember = ProjectMember.builder()
                 .user(user)
                 .project(project)
+                .role(ProjectRole.EDITOR)
                 .build();
 
-        given(userValidator.validateAndGetUser(userId)).willReturn(user);
-        given(projectValidator.validateAndGetProject(projectId)).willReturn(project);
-        given(projectMemberRepository.findByUserAndProject(user, project)).willReturn(Optional.of(projectMember));
+        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.EDITOR)).willReturn(projectMember);
         given(aiService.generateWbsFromMarkdown(markdownContent)).willReturn(wbsResponseDto);
 
         // when
         projectService.generateWbsAndSaveTasks(generateWbsRequestDto, userId);
 
         // then
+        then(projectMemberValidator)
+                .should().validatePermission(userId, projectId, ProjectRole.EDITOR);
         then(aiService).should().generateWbsFromMarkdown(markdownContent);
         then(taskService).should().saveTasksFromAiResponse(user, project, wbsResponseDto);
     }
+
 
     @Test
     void 유저가_참여_중인_모든_프로젝트_조회_테스트() {
@@ -202,7 +209,7 @@ public class ProjectServiceTest {
                 .projectName("project1")
                 .projectType("typeA")
                 .teamSize(3)
-                .expectedDurationDays(1)
+                .expectedDurationMonths(1)
                 .startDate(LocalDate.parse("2025-01-01"))
                 .endDate(LocalDate.parse("2025-02-01"))
                 .budget(new BigDecimal("500000"))
@@ -218,7 +225,7 @@ public class ProjectServiceTest {
                 .projectName("project2")
                 .projectType("typeB")
                 .teamSize(5)
-                .expectedDurationDays(2)
+                .expectedDurationMonths(2)
                 .startDate(LocalDate.parse("2025-03-01"))
                 .endDate(LocalDate.parse("2025-04-01"))
                 .budget(new BigDecimal("1000000"))
@@ -276,7 +283,7 @@ public class ProjectServiceTest {
                 .projectName("projectName")
                 .projectType("projectType")
                 .teamSize(5)
-                .expectedDurationDays(3)
+                .expectedDurationMonths(3)
                 .startDate(LocalDate.parse("2025-09-01"))
                 .endDate(LocalDate.parse("2025-12-01"))
                 .budget(new BigDecimal("1000000"))
@@ -287,17 +294,19 @@ public class ProjectServiceTest {
                 .detailedRequirements("세부 요구사항입니다.")
                 .build();
 
-        ReflectionTestUtils.setField(project, "id", projectId);
+        ProjectMember ownerMember = ProjectMember.builder()
+                .user(user)
+                .project(project)
+                .role(ProjectRole.OWNER)
+                .build();
 
-        given(userValidator.validateAndGetUser(userId)).willReturn(user);
-        given(projectValidator.validateAndGetProject(projectId)).willReturn(project);
+        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.OWNER)).willReturn(ownerMember);
 
         // when
         projectService.deleteProject(projectId, userId);
 
         // then
-        then(userValidator).should().validateAndGetUser(userId);
-        then(projectValidator).should().validateAndGetProject(projectId);
+        then(projectMemberValidator).should().validatePermission(userId, projectId, ProjectRole.OWNER);
         then(projectRepository).should().delete(project);
     }
 }
