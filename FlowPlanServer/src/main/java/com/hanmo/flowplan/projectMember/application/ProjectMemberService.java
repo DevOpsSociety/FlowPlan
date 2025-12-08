@@ -64,6 +64,27 @@ public class ProjectMemberService {
     targetMember.updateRole(ProjectRole.EDITOR);
   }
 
+  @Transactional
+  public void updateMemberRole(Long projectId, Long memberId, String ownerId, ProjectRole newRole) {
+
+    // 1. 요청자(Owner) 권한 검증
+    // (이 메서드를 호출한 사람이 OWNER가 맞는지 확인)
+    projectMemberValidator.validatePermission(ownerId, projectId, ProjectRole.OWNER);
+
+    // 2. 대상 멤버 조회
+    ProjectMember targetMember = projectMemberRepository.findById(memberId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "멤버를 찾을 수 없습니다."));
+
+    // 3. (안전장치) 자기 자신의 권한은 변경할 수 없음 (소유권 이전을 통해서만 가능)
+    if (targetMember.getUser().getGoogleId().equals(ownerId)) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "본인의 권한은 변경할 수 없습니다.");
+    }
+
+    // 4. 권한 변경 적용
+    targetMember.updateRole(newRole);
+  }
+
+
   // ============================================================
   // 1. 프로젝트 멤버 조회 (Read)
   // ============================================================

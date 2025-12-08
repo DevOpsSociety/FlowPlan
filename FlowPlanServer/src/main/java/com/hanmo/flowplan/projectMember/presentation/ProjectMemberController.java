@@ -3,6 +3,7 @@ package com.hanmo.flowplan.projectMember.presentation;
 import com.hanmo.flowplan.global.annotation.CurrentUserId;
 import com.hanmo.flowplan.projectMember.application.ProjectMemberService;
 import com.hanmo.flowplan.projectMember.presentation.dto.ProjectMemberResponse;
+import com.hanmo.flowplan.projectMember.presentation.dto.UpdateProjectMemberRoleRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,18 @@ public class ProjectMemberController {
                                                 @PathVariable Long memberId,
                                                 @CurrentUserId String ownerId) {
     projectMemberService.approveRoleChange(projectId, memberId, ownerId);
+    return ResponseEntity.ok().build();
+  }
+
+  @Operation(summary = "멤버 권한 변경", description = "소유자가 멤버의 권한을 직접 변경합니다.")
+  @PatchMapping("/{memberId}")
+  public ResponseEntity<Void> updateMemberRole(
+      @PathVariable Long projectId,
+      @PathVariable Long memberId,
+      @RequestBody UpdateProjectMemberRoleRequest request, // DTO로 권한 받음
+      @CurrentUserId String ownerId
+  ) {
+    projectMemberService.updateMemberRole(projectId, memberId, ownerId, request.role());
     return ResponseEntity.ok().build();
   }
 }
