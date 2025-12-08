@@ -55,7 +55,7 @@ public class InvitationService {
 
     // 5. 이메일 발송 (프론트엔드 주소)
     // 예: https://flowplan-ai.vercel.app/invite/accept?token=...
-    String inviteUrl = "https://flowplan-ai.vercel.app/invite/accept?token=" + token;
+    String inviteUrl = "http://localhost:3000/invite/accept?token=" + token;
     emailService.sendInvitationEmail(inviteeEmail, project.getProjectName(), inviteUrl);
   }
 
