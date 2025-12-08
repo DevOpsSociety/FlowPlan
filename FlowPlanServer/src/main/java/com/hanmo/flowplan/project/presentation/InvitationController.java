@@ -5,6 +5,7 @@ import com.hanmo.flowplan.project.application.InvitationService;
 import com.hanmo.flowplan.project.presentation.dto.InviteUserRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,9 +26,14 @@ public class InvitationController {
   @PostMapping("/{projectId}/invite")
   public ResponseEntity<Void> inviteUser(@PathVariable Long projectId,
                                          @RequestBody InviteUserRequest request,
-                                         @CurrentUserId String googleId) {
+                                         @CurrentUserId String googleId,
+                                         HttpServletRequest httpServletRequest) {
     // 서비스 호출
-    invitationService.inviteUser(projectId, request.email(), googleId);
+    String origin = httpServletRequest.getHeader("Origin");
+    if (origin == null) {
+      origin = "https://flowplan-ai.vercel.app"; // 배포 주소를 기본으로
+    }
+    invitationService.inviteUser(projectId, request.email(), googleId, origin);
 
     // 성공 시 200 OK 반환
     return ResponseEntity.ok().build();
