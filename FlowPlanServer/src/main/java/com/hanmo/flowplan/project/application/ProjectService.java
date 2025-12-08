@@ -85,7 +85,7 @@ public class ProjectService {
     AiWbsResponseDto wbsResponseDto = aiService.generateWbsFromMarkdown(generateWbsRequestDto.markdownContent());
 
     // 2. (WBS 저장) - TaskService를 통해 WBS 항목 저장
-    taskService.saveTasksFromAiResponse(member.getUser(), member.getProject(), wbsResponseDto);
+    taskService.saveTasksFromAiResponse(member.getProject(), wbsResponseDto);
   }
 
   @Transactional(readOnly = true)

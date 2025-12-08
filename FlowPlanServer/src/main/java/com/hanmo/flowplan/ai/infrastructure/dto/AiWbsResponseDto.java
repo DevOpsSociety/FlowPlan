@@ -18,7 +18,7 @@ public record AiWbsResponseDto(
       @JsonProperty("task_id")
       String taskId,
 
-      @JsonProperty("parent_id")
+      @JsonProperty("parent_task_id")
       String parentTaskId,
 
       String name,
