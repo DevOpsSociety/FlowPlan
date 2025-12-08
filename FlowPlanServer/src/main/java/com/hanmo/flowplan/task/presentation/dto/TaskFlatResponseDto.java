@@ -20,7 +20,8 @@ public record TaskFlatResponseDto(
     int duration,
     int progress,
     TaskStatus status,
-    String assigneeEmail    // 실제 담당자 이름
+    String assigneeEmail,    // 실제 담당자 email
+    String assigneeName     // 실제 담당자 이름
 ) {
 
   /**
@@ -32,8 +33,9 @@ public record TaskFlatResponseDto(
     // ⭐️ 부모 Task가 있으면 부모의 ID를, 없으면 null
     Long parentId = (task.getParent() != null) ? task.getParent().getId() : null;
 
-    // ⭐️ 담당자(User)가 할당되었으면 이름을, 없으면 null
-    String assignee = (task.getAssignee() != null) ? task.getAssignee().getName() : task.getRecommendedRole();
+    // ⭐️ 담당자(User)가 할당되었으면 email을, 없으면 null
+    String assigneeEmail = (task.getAssignee() != null) ? task.getAssignee().getEmail() : task.getRecommendedRole();
+    String assigneeName = (task.getAssignee() != null) ? task.getAssignee().getName() : task.getRecommendedRole();
 
     // duration 계산 (일 단위)
     int duration = 0;
@@ -52,7 +54,8 @@ public record TaskFlatResponseDto(
         duration,
         task.getProgress(),
         task.getStatus(),
-        assignee
+        assigneeEmail,
+        assigneeName
     );
   }
 }
