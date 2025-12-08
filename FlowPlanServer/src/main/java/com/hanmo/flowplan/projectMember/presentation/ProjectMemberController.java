@@ -67,11 +67,11 @@ public class ProjectMemberController {
   @PatchMapping("/{memberId}")
   public ResponseEntity<Void> updateMemberRole(
       @PathVariable Long projectId,
-      @PathVariable Long memberId,
+      @PathVariable Long PmemberId,
       @RequestBody UpdateProjectMemberRoleRequest request, // DTO로 권한 받음
       @CurrentUserId String ownerId
   ) {
-    projectMemberService.updateMemberRole(projectId, memberId, ownerId, request.role());
+    projectMemberService.updateMemberRole(projectId, PmemberId, ownerId, request.role());
     return ResponseEntity.ok().build();
   }
 }

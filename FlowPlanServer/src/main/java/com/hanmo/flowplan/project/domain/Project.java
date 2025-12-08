@@ -13,6 +13,7 @@ import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,4 +93,9 @@ public class Project extends BaseTimeEntity {
     this.risks = risks;
     this.detailedRequirements = detailedRequirements;
   }
+
+  public void updateLastModifiedDate() {
+    this.updatedAt = LocalDateTime.now();
+  }
+
 }
