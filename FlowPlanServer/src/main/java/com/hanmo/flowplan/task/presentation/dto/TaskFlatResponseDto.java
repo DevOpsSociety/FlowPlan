@@ -34,7 +34,7 @@ public record TaskFlatResponseDto(
     Long parentId = (task.getParent() != null) ? task.getParent().getId() : null;
 
     // ⭐️ 담당자(User)가 할당되었으면 email을, 없으면 null
-    String assigneeEmail = (task.getAssignee() != null) ? task.getAssignee().getEmail() : task.getRecommendedRole();
+    String assigneeEmail = (task.getAssignee() != null) ? task.getAssignee().getEmail() : null;
     String assigneeName = (task.getAssignee() != null) ? task.getAssignee().getName() : task.getRecommendedRole();
 
     // duration 계산 (일 단위)
