@@ -56,6 +56,7 @@ class MarkdownSpecGenerator:
             "priority": request.priority.value if request.priority else None,
             "stakeholders": request.stakeholders,
             "deliverables": request.deliverables,
+            "risks": request.risks,
             
             # 상세 요구사항
             "detailed_requirements": request.detailed_requirements
