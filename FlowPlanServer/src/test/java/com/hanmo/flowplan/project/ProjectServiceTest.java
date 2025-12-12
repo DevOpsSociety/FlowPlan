@@ -50,9 +50,6 @@ public class ProjectServiceTest {
     UserValidator userValidator;
 
     @Mock
-    ProjectValidator projectValidator;
-
-    @Mock
     AiDtoMapper aiDtoMapper;
 
     @Mock
@@ -189,7 +186,7 @@ public class ProjectServiceTest {
         then(projectMemberValidator)
                 .should().validatePermission(userId, projectId, ProjectRole.EDITOR);
         then(aiService).should().generateWbsFromMarkdown(markdownContent);
-        then(taskService).should().saveTasksFromAiResponse(user, project, wbsResponseDto);
+        then(taskService).should().saveTasksFromAiResponse(project, wbsResponseDto);
     }
 
 

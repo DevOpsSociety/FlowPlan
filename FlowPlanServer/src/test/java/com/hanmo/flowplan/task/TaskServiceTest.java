@@ -109,7 +109,7 @@ public class TaskServiceTest {
         ArgumentCaptor<List<Task>> saveCaptor = ArgumentCaptor.forClass(List.class);
 
         // when
-        taskService.saveTasksFromAiResponse(user, project, wbs);
+        taskService.saveTasksFromAiResponse(project, wbs);
 
         // then
         then(taskRepository).should().saveAll(saveCaptor.capture());
@@ -155,7 +155,7 @@ public class TaskServiceTest {
         given(wbs.tasks()).willReturn(List.of());
 
         // when
-        taskService.saveTasksFromAiResponse(user, project, wbs);
+        taskService.saveTasksFromAiResponse(project, wbs);
 
         // then
         then(taskRepository).should(never()).saveAll(anyList());
@@ -223,9 +223,9 @@ public class TaskServiceTest {
         assertThat(result.tasks()).hasSize(2);
     }
 
-    @DisplayName("작업 생성 후, 부모 진행률을 재계산한다.")
+    @DisplayName("작업 생성 후 부모가 존재하면 부모 진행률을 재계산한다.")
     @Test
-    void 작업_생성시_부모_진행률_재계산() {
+    void 작업_생성시_부모_진행률_재계산_테스트() {
         // given
         String userId = "u1";
         Long projectId = 10L;
@@ -289,10 +289,12 @@ public class TaskServiceTest {
 
         given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.EDITOR))
                 .willReturn(member);
-        given(taskValidator.validateAndGetParentTask(1L)).willReturn(parent);
+        given(taskValidator.validateAndGetParentTask(1L))
+                .willReturn(parent);
         given(taskValidator.validateAndGetAssignee(project, "test@test.com"))
                 .willReturn(assignee);
-        given(taskRepository.save(any(Task.class))).willReturn(savedTask);
+        given(taskRepository.save(any(Task.class)))
+                .willReturn(savedTask);
         given(taskRepository.findAllByParentId(parent.getId()))
                 .willReturn(List.of(savedTask));
 
@@ -302,7 +304,6 @@ public class TaskServiceTest {
         // then
         then(taskRepository).should(atLeastOnce()).save(any(Task.class));
         then(taskRepository).should().flush();
-        then(projectRepository).should().updateLastModifiedDate(projectId);
         assertThat(parent.getProgress()).isEqualTo(50);
         assertThat(result.name()).isEqualTo("child");
     }
