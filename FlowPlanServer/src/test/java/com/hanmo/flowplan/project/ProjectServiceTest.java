@@ -13,7 +13,6 @@ import com.hanmo.flowplan.ai.infrastructure.dto.AiWbsResponseDto;
 import com.hanmo.flowplan.project.application.ProjectService;
 import com.hanmo.flowplan.project.application.dto.CreateProjectWithSpecResponse;
 import com.hanmo.flowplan.project.application.dto.ProjectListResponse;
-import com.hanmo.flowplan.project.application.validator.ProjectValidator;
 import com.hanmo.flowplan.project.domain.Project;
 import com.hanmo.flowplan.project.domain.ProjectPriority;
 import com.hanmo.flowplan.project.domain.repository.ProjectRepository;
@@ -30,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,6 +40,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 public class ProjectServiceTest {
+
     @Mock
     ProjectRepository projectRepository;
 
@@ -64,6 +65,7 @@ public class ProjectServiceTest {
     @Mock
     ProjectMemberValidator projectMemberValidator;
 
+    @DisplayName("프로젝트 생성 후 AI 스펙 문서를 생성한다.")
     @Test
     void 프로젝트_생성_및_스펙_생성_테스트() {
         // given
@@ -129,13 +131,15 @@ public class ProjectServiceTest {
         given(aiService.generateMarkdownSpec(aiSpecRequestDto)).willReturn(aiSpecResponseDto);
 
         // when
-        CreateProjectWithSpecResponse result = projectService.createProjectAndGenerateSpec(createProjectRequest, userId);
+        CreateProjectWithSpecResponse result =
+                projectService.createProjectAndGenerateSpec(createProjectRequest, userId);
 
         // then
         assertThat(result.markdownContent()).isEqualTo("markdownSpec");
         then(projectRepository).should().save(any(Project.class));
     }
 
+    @DisplayName("WBS 생성 요청 후 AI WBS를 기반으로 Task를 저장한다.")
     @Test
     void WBS_생성_및_Task_저장_테스트() {
         // given
@@ -176,20 +180,20 @@ public class ProjectServiceTest {
                 .role(ProjectRole.EDITOR)
                 .build();
 
-        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.EDITOR)).willReturn(projectMember);
+        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.EDITOR))
+                .willReturn(projectMember);
         given(aiService.generateWbsFromMarkdown(markdownContent)).willReturn(wbsResponseDto);
 
         // when
         projectService.generateWbsAndSaveTasks(generateWbsRequestDto, userId);
 
         // then
-        then(projectMemberValidator)
-                .should().validatePermission(userId, projectId, ProjectRole.EDITOR);
+        then(projectMemberValidator).should().validatePermission(userId, projectId, ProjectRole.EDITOR);
         then(aiService).should().generateWbsFromMarkdown(markdownContent);
         then(taskService).should().saveTasksFromAiResponse(project, wbsResponseDto);
     }
 
-
+    @DisplayName("유저가 참여 중인 모든 프로젝트를 조회한다.")
     @Test
     void 유저가_참여_중인_모든_프로젝트_조회_테스트() {
         // given
@@ -233,21 +237,11 @@ public class ProjectServiceTest {
                 .detailedRequirements("reqB")
                 .build();
 
-        LocalDateTime updated1 = LocalDateTime.of(2025, 1, 10, 0, 0);
-        LocalDateTime updated2 = LocalDateTime.of(2025, 2, 10, 0, 0);
+        ReflectionTestUtils.setField(project1, "updatedAt", LocalDateTime.of(2025, 1, 10, 0, 0));
+        ReflectionTestUtils.setField(project2, "updatedAt", LocalDateTime.of(2025, 2, 10, 0, 0));
 
-        ReflectionTestUtils.setField(project1, "updatedAt", updated1);
-        ReflectionTestUtils.setField(project2, "updatedAt", updated2);
-
-        ProjectMember membership1 = ProjectMember.builder()
-                .user(user)
-                .project(project1)
-                .build();
-
-        ProjectMember membership2 = ProjectMember.builder()
-                .user(user)
-                .project(project2)
-                .build();
+        ProjectMember membership1 = ProjectMember.builder().user(user).project(project1).build();
+        ProjectMember membership2 = ProjectMember.builder().user(user).project(project2).build();
 
         given(userValidator.validateAndGetUser(userId)).willReturn(user);
         given(projectMemberRepository.findAllByUser(user))
@@ -261,6 +255,7 @@ public class ProjectServiceTest {
         then(projectMemberRepository).should().findAllByUser(user);
     }
 
+    @DisplayName("OWNER는 프로젝트를 삭제할 수 있다.")
     @Test
     void 프로젝트_삭제_테스트() {
         // given
@@ -297,7 +292,8 @@ public class ProjectServiceTest {
                 .role(ProjectRole.OWNER)
                 .build();
 
-        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.OWNER)).willReturn(ownerMember);
+        given(projectMemberValidator.validatePermission(userId, projectId, ProjectRole.OWNER))
+                .willReturn(ownerMember);
 
         // when
         projectService.deleteProject(projectId, userId);
