@@ -113,6 +113,10 @@ public class TaskService {
     Task parentTask = taskValidator.validateAndGetParentTask(dto.parentId());
     User assignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus statusEnum = convertStatus(dto.status());
+    if (statusEnum == null) {
+      statusEnum = TaskStatus.TODO;
+    }
+
 
     Task task = Task.builder()
         .project(project)
@@ -151,7 +155,8 @@ public class TaskService {
     User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus newStatus = convertStatus(dto.status());
 
-    task.update(dto, newAssignee, newStatus);
+    boolean hasChildren = taskRepository.existsByParentId(task.getId());
+    task.update(dto, newAssignee, newStatus, hasChildren);
 
     // 상태 및 진행률 전파 로직
     if (task.getStatus() == TaskStatus.DONE) {
@@ -233,7 +238,7 @@ public class TaskService {
 
   private TaskStatus convertStatus(String statusString) {
     if (statusString == null || statusString.isBlank()) {
-      return TaskStatus.TODO;
+      return null; // ⭐️ 수정: 값이 없으면 null 반환 (변경 안 함)
     }
     try {
       return TaskStatus.valueOf(statusString.toUpperCase());

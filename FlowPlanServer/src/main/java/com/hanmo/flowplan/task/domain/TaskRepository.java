@@ -9,4 +9,5 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
   // ⭐️ 특정 부모를 가진 자식들 조회 (하향 전파, 상향 계산용)
   List<Task> findAllByParentId(Long parentId);
+  boolean existsByParentId(Long parentId);
 }
