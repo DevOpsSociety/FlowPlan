@@ -21,7 +21,8 @@ public class WebConfig {
         "https://localhost:3000",
         "http://127.0.0.1:3000",
         "https://127.0.0.1:3000",
-        "https://flowplan-ai.vercel.app"
+        "https://flowplan-ai.vercel.app",
+        "https://api.flowplan-ai.store"
     ));
 
     // 2. 허용할 HTTP 메소드

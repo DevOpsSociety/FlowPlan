@@ -26,12 +26,20 @@ public class ProjectMember extends BaseTimeEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  // TODO: 이 멤버의 프로젝트 내 "역할" (예: "PL", "개발자")을 저장할 컬럼 추가 가능
-  // private String projectRole;
+  // TODO: 이 멤버의 프로젝트 내 권한
+  @Enumerated(EnumType.STRING)
+  private ProjectRole projectRole;
 
   @Builder
-  public ProjectMember(Project project, User user) {
-    this.project = project;
+  public ProjectMember(User user, Project project, ProjectRole role) {
     this.user = user;
+    this.project = project;
+    // role이 안 들어오면 기본값으로 VIEWRE나 EDITOR 설정
+    this.projectRole = (role != null) ? role : ProjectRole.VIEWER;
+  }
+
+  //권한 변경용 메서드 (나중에 관리자 기능에 필요)
+  public void updateRole(ProjectRole newRole) {
+    this.projectRole = newRole;
   }
 }
