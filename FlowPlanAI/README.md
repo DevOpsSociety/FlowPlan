@@ -182,7 +182,7 @@ Copy-Item .env.example .env
 uvicorn app.main:app --reload
 
 # 프로덕션 모드
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+C:/FlowPlan/FlowPlanAI/venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### 4. API 문서 확인

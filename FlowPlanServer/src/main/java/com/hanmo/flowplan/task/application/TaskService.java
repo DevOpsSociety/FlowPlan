@@ -40,7 +40,7 @@ public class TaskService {
 
   // AI 응답으로 WBS 저장 (내부 로직)
   @Transactional
-  public void saveTasksFromAiResponse(User user, Project project, AiWbsResponseDto wbsResponseDto) {
+  public void saveTasksFromAiResponse(Project project, AiWbsResponseDto wbsResponseDto) {
 
     if (wbsResponseDto == null || wbsResponseDto.tasks() == null || wbsResponseDto.tasks().isEmpty()) {
       log.warn("No tasks to save for project ID: {}", project.getId());
@@ -49,7 +49,7 @@ public class TaskService {
 
     // 1. (1-Pass: 엔티티 생성 및 저장)
     Map<String, Task> taskMap = new HashMap<>();
-    List<Task> tasksToSave = new ArrayList<>();
+    List<Task> allTasks = new ArrayList<>();
 
     for (AiWbsResponseDto.TaskDto dto : wbsResponseDto.tasks()) {
       Task task = Task.builder()
@@ -63,23 +63,26 @@ public class TaskService {
           .recommendedRole(dto.assignee()) // AI 추천 역할 저장
           .build();
 
-      tasksToSave.add(task);
       taskMap.put(dto.taskId(), task);
+      allTasks.add(task);
     }
-
-    taskRepository.saveAll(tasksToSave);
 
     // 2. (2-Pass: 부모-자식 관계 설정)
     for (AiWbsResponseDto.TaskDto dto : wbsResponseDto.tasks()) {
-      if (dto.parentTaskId() != null) {
+      String pId = dto.parentTaskId();
+      // ⭐️ 핵심 수정: null 체크 강화 ("null" 문자열 방어)
+      if (pId != null && !pId.equals("null") && !pId.isBlank()) {
+
         Task currentTask = taskMap.get(dto.taskId());
-        Task parentTask = taskMap.get(dto.parentTaskId());
+        Task parentTask = taskMap.get(pId);
 
         if (currentTask != null && parentTask != null) {
           currentTask.setParent(parentTask);
         }
       }
     }
+    // 3. 일괄 저장 (Cascade 옵션 없이도 JPA가 알아서 순서 맞춰 저장함)
+    taskRepository.saveAll(allTasks);
 
     projectRepository.updateLastModifiedDate(project.getId());
   }
@@ -110,6 +113,10 @@ public class TaskService {
     Task parentTask = taskValidator.validateAndGetParentTask(dto.parentId());
     User assignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus statusEnum = convertStatus(dto.status());
+    if (statusEnum == null) {
+      statusEnum = TaskStatus.TODO;
+    }
+
 
     Task task = Task.builder()
         .project(project)
@@ -130,7 +137,7 @@ public class TaskService {
       taskRepository.flush();
       calculateParentProgress(savedTask.getParent());
     }
-    projectRepository.updateLastModifiedDate(projectId);
+    project.updateLastModifiedDate();
 
     return TaskFlatResponseDto.from(savedTask);
   }
@@ -148,7 +155,8 @@ public class TaskService {
     User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus newStatus = convertStatus(dto.status());
 
-    task.update(dto, newAssignee, newStatus);
+    boolean hasChildren = taskRepository.existsByParentId(task.getId());
+    task.update(dto, newAssignee, newStatus, hasChildren);
 
     // 상태 및 진행률 전파 로직
     if (task.getStatus() == TaskStatus.DONE) {
@@ -230,7 +238,7 @@ public class TaskService {
 
   private TaskStatus convertStatus(String statusString) {
     if (statusString == null || statusString.isBlank()) {
-      return TaskStatus.TODO;
+      return null; // ⭐️ 수정: 값이 없으면 null 반환 (변경 안 함)
     }
     try {
       return TaskStatus.valueOf(statusString.toUpperCase());

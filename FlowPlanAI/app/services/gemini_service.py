@@ -2,6 +2,7 @@
 from app.core.config import settings
 from typing import Dict, Any
 import asyncio
+from datetime import date
 
 
 class GeminiService:
@@ -38,6 +39,7 @@ class GeminiService:
     def _build_common_header(self, data: Dict[str, Any]) -> str:
         parts = [
             "당신은 프로젝트 관리 전문가입니다. 다음 정보를 기반으로 작업을 수행하세요.",
+            f"현재 날짜(기준일): {date.today().isoformat()}",
             f"프로젝트명: {data.get('project_name')}",
             f"프로젝트 주제: {data.get('project_type')}",
             f"참여인원: {data.get('team_size')}",
@@ -106,6 +108,7 @@ class GeminiService:
 4. 프로젝트 정보를 명확하고 읽기 쉽게 구조화
 5. 사용자가 나중에 수정할 수 있도록 충분히 상세하게 작성
 6. 다른 설명 없이 마크다운 명세서만 출력
+7. 시작일과 종료일이 주어지지 않은 경우, '현재 날짜'를 시작일로 하고 '예상 기간'을 더해 종료일을 계산하여 기입하세요.
 
 마크다운 예시 구조:
 {markdown_example}
@@ -144,12 +147,16 @@ class GeminiService:
 
 필수 규칙:
 1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
-2. task_id는 "1.0", "1.1", "1.1.1" 형식 (최대 3단계)
+2. task_id는 "1.0", "1.1" 형식 사용.
+   - 최상위 작업(Level 0, 예: 1.0)과 그 하위 작업(Level 1, 예: 1.1)까지만 생성하세요.
+   - 1.1.1과 같은 3단계(Level 2) 작업은 절대 생성하지 마세요.
 3. progress는 항상 0
 4. status는 항상 "할일"
 5. duration_days는 정수(integer)
 6. start_date, end_date는 "YYYY-MM-DD" 형식
-7. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+7. subtasks는 배열 (하위 작업이 없으면 빈 배열 []).
+   - 최상위 작업(1.0 등)은 subtasks를 가질 수 있습니다.
+   - 하위 작업(1.1 등)의 subtasks는 항상 비어 있어야 합니다 ([]).
 8. JSON만 출력 (설명, 코드블록 금지)
 
 JSON 스키마:
@@ -199,11 +206,15 @@ JSON 스키마:
 
 필수 규칙:
 1. 모든 필드는 영문 키 이름 사용 (project_name, total_tasks, wbs_structure 등)
-2. task_id는 "1.0", "1.1", "1.1.1" 형식
+2. task_id는 "1.0", "1.1" 형식 사용.
+   - 최상위 작업(Level 0, 예: 1.0)과 그 하위 작업(Level 1, 예: 1.1)까지만 생성하세요.
+   - 1.1.1과 같은 3단계(Level 2) 작업은 절대 생성하지 마세요.
 3. progress는 항상 0
 4. status는 항상 "할일"
 5. duration_days는 정수(integer)
-6. subtasks는 배열 (하위 작업이 없으면 빈 배열 [])
+6. subtasks는 배열 (하위 작업이 없으면 빈 배열 []).
+   - 최상위 작업(1.0 등)은 subtasks를 가질 수 있습니다.
+   - 하위 작업(1.1 등)의 subtasks는 항상 비어 있어야 합니다 ([]).
 7. JSON 코드블록(```)으로 감싸지 말고 순수 JSON만 출력
 
 JSON 스키마 예시:

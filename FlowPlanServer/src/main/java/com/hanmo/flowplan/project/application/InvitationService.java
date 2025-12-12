@@ -25,7 +25,6 @@ public class InvitationService {
 
   private final ProjectInvitationRepository invitationRepository;
   private final ProjectMemberRepository projectMemberRepository;
-  private final UserRepository userRepository;
   private final EmailService emailService;
 
   private final ProjectMemberValidator projectMemberValidator;
@@ -34,7 +33,7 @@ public class InvitationService {
 
   // 1. 초대 보내기
   @Transactional
-  public void inviteUser(Long projectId, String inviteeEmail, String ownerGoogleId) {
+  public void inviteUser(Long projectId, String inviteeEmail, String ownerGoogleId, String baseUrl) {
     // 1. 권한 검증 (초대하는 사람이 프로젝트 멤버인지)
     Project project = projectMemberValidator.validateMembership(ownerGoogleId, projectId);
 
@@ -55,7 +54,7 @@ public class InvitationService {
 
     // 5. 이메일 발송 (프론트엔드 주소)
     // 예: https://flowplan-ai.vercel.app/invite/accept?token=...
-    String inviteUrl = "https://flowplan-ai.vercel.app/invite/accept?token=" + token;
+    String inviteUrl = baseUrl +"/invite/accept?token=" +token;
     emailService.sendInvitationEmail(inviteeEmail, project.getProjectName(), inviteUrl);
   }
 

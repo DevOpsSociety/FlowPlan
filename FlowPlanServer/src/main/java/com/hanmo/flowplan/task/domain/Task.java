@@ -83,17 +83,33 @@ public class Task extends BaseTimeEntity {
     this.parent = parent;
   }
 
-  public void update(UpdateTaskRequestDto dto, User newAssignee, TaskStatus newStatus) {
+  public void update(UpdateTaskRequestDto dto, User newAssignee, TaskStatus newStatus, boolean hasChildren) {
     // 1. 이름 수정
-    if (dto.name() != null) {this.name = dto.name();}
+    if (dto.name() != null) {
+      this.name = dto.name();
+    }
     // 2. 날짜 수정 (간트차트)
-    if (dto.startDate() != null) {this.startDate = dto.startDate();}
-    if (dto.endDate() != null) {this.endDate = dto.endDate();}
+    if (dto.startDate() != null) {
+      this.startDate = dto.startDate();
+    }
+    if (dto.endDate() != null) {
+      this.endDate = dto.endDate();
+    }
     // 3. 상태 수정 (칸반보드)
-    if (newStatus != null) {this.status = newStatus;}
-    if (dto.progress() != null) {this.progress = dto.progress();}
+    if (newStatus != null) {
+      this.status = newStatus;
+    }
+    if (dto.progress() != null) {
+      // ⭐️ 핵심: 자식이 없는(Leaf) 경우에만 진행률 수정을 허용합니다.
+      // 자식이 있다면(hasChildren == true), 요청된 진행률 값(dto.progress)을 무시합니다.
+      if (!hasChildren) {
+        this.progress = dto.progress();
+      }
+    }
     // 4. 담당자 수정
-    if (newAssignee != null) {this.assignee = newAssignee;}
+    if (newAssignee != null) {
+      this.assignee = newAssignee;
+    }
     // 3. ⭐️ 상태 <-> 진행률 동기화 (핵심 로직)
     syncStatusAndProgress(newStatus != null, dto.progress() != null);
   }
