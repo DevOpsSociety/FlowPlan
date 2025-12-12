@@ -14,8 +14,8 @@ public record AiSpecRequestDto(
     @JsonProperty("team_size")
     int teamSize,
 
-    @JsonProperty("expected_duration_days")
-    int expectedDurationDays,
+    @JsonProperty("expected_duration_months")
+    int expectedDurationMonths,
 
     @JsonProperty("start_date")
     String startDate,

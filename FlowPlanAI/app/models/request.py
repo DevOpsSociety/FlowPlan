@@ -6,9 +6,9 @@ from enum import Enum
 
 class Priority(str, Enum):
     """우선순위"""
-    HIGH = "높음"
-    MEDIUM = "중간"
-    LOW = "낮음"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
 
 
 class WBSGenerateRequest(BaseModel):
@@ -44,11 +44,11 @@ class WBSGenerateRequest(BaseModel):
         description="[필수] 참여 인원 수", 
         example=5
     )
-    expected_duration_days: int = Field(
+    expected_duration_months: int = Field(
         ..., 
         gt=0, 
-        description="[필수] 예상 기간(일)", 
-        example=60
+        description="[필수] 예상 기간(개월)", 
+        example=3
     )
     
     # ========================================

@@ -36,7 +36,7 @@ class MarkdownSpecGenerator:
             start_date = request.start_date.isoformat()
             end_date = request.end_date.isoformat()
         else:
-            total_days = request.expected_duration_days
+            total_days = request.expected_duration_months * 30
             start_date = None
             end_date = None
         

@@ -23,14 +23,12 @@ public class AiDtoMapper {
     List<String> deliverablesList = stringToList(project.getDeliverables());
     List<String> risksList = stringToList(project.getRisks());
 
-    String priorityKorean = (project.getPriority() != null)
-        ? project.getPriority().getKoreanName() // ⬅️ switch문이 사라짐!
-        : null;
+    String priorityStr = (project.getPriority() != null) ? project.getPriority().name() : null;
 
 
     return new AiSpecRequestDto(
         project.getProjectName(),
-        project.getProjectType(), // ⭐️ projectType 필드가 없으므로 description 사용
+        project.getProjectType(),
 
         project.getTeamSize(),
         project.getExpectedDurationMonths(),
@@ -39,7 +37,7 @@ public class AiDtoMapper {
         endDateStr,
 
         project.getBudget() != null ? project.getBudget().toString() : null,
-        priorityKorean,
+        priorityStr,
 
         stakeholdersList,
         deliverablesList,
