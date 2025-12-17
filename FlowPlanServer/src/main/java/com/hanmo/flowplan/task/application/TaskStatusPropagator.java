@@ -58,7 +58,10 @@ public class TaskStatusPropagator {
     } else if (currentStatus == TaskStatus.IN_PROGRESS) {
       // 진행 중: 상위/하위 모두 진행 중(1%)으로 강제 변경
       propagateStatusDown(task, TaskStatus.IN_PROGRESS, 1);
-      propagateStatusUp(task, TaskStatus.IN_PROGRESS, 1);
+      updateAncestorsStatus(task, TaskStatus.IN_PROGRESS);
+      if (task.getParent() != null) {
+        calculateParentProgress(task.getParent());
+      }
     } else if (currentStatus == TaskStatus.TODO) {
       // 할 일: 상위/하위 모두 할 일(0%)로 강제 변경
       propagateStatusDown(task, TaskStatus.TODO, 0);
@@ -91,6 +94,18 @@ public class TaskStatusPropagator {
     taskRepository.save(parent);
 
     propagateStatusUp(parent, status, progress);
+  }
+
+  private void updateAncestorsStatus(Task child, TaskStatus status) {
+    Task parent = child.getParent();
+    if (parent == null) return;
+
+    // 이미 해당 상태라면 전파 중단 (최적화)
+    if (parent.getStatus() != status) {
+      parent.setStatus(status);
+      taskRepository.save(parent);
+      updateAncestorsStatus(parent, status);
+    }
   }
 
   private void calculateParentProgress(Task parent) {
