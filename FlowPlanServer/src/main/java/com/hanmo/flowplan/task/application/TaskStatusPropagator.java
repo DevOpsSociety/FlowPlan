@@ -50,12 +50,25 @@ public class TaskStatusPropagator {
     TaskStatus currentStatus = task.getStatus();
 
     if (currentStatus == TaskStatus.DONE) {
+      Integer progressObjDone = task.getProgress();
+      int progressDone = (progressObjDone == null) ? 0 : progressObjDone;
+      if (progressDone < 100) {
+        task.setProgress(100);
+        taskRepository.save(task);
+      }
       // 완료: 하위 작업 모두 완료(100%) 처리, 상위는 계산
       propagateStatusDown(task, TaskStatus.DONE, 100);
       if (task.getParent() != null) {
         calculateParentProgress(task.getParent());
       }
     } else if (currentStatus == TaskStatus.IN_PROGRESS) {
+      task.setStatus(TaskStatus.IN_PROGRESS);
+      Integer progressObj = task.getProgress();
+      int progress = (progressObj == null) ? 0 : progressObj;
+      if (progress < 1) {
+        task.setProgress(1);
+      }
+      taskRepository.save(task);
       // 진행 중: 상위/하위 모두 진행 중(1%)으로 강제 변경
       propagateStatusDown(task, TaskStatus.IN_PROGRESS, 1);
       updateAncestorsStatus(task, TaskStatus.IN_PROGRESS);

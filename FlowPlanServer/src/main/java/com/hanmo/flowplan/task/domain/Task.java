@@ -121,6 +121,11 @@ public class Task extends BaseTimeEntity {
         this.progress = 100;
       } else if (this.status == TaskStatus.TODO) {
         this.progress = 0;
+      } else if (this.status == TaskStatus.IN_PROGRESS) {
+        // 진행중으로 변경할 때 기존 진행률이 0이면 최소 1%로 설정하여 UI상 변경이 체감되도록 함
+        if (this.progress == 0 || this.progress == 100) {
+          this.progress = 1;
+        }
       }
     }
 
