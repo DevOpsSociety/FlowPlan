@@ -37,6 +37,7 @@ public class TaskService {
   private final TaskRepository taskRepository;
   private final ProjectMemberValidator projectMemberValidator;
   private final TaskValidator taskValidator;
+  private final TaskStatusPropagator taskStatusPropagator;
 
   // AI 응답으로 WBS 저장 (내부 로직)
   @Transactional
@@ -135,7 +136,7 @@ public class TaskService {
     // 하위 작업 생성 시 부모 진행률 재계산
     if (savedTask.getParent() != null) {
       taskRepository.flush();
-      calculateParentProgress(savedTask.getParent());
+      taskStatusPropagator.updateParentProgress(savedTask.getParent());
     }
     project.updateLastModifiedDate();
 
@@ -155,16 +156,14 @@ public class TaskService {
     User newAssignee = taskValidator.validateAndGetAssignee(project, dto.assigneeEmail());
     TaskStatus newStatus = convertStatus(dto.status());
 
+    TaskStatus oldStatus = task.getStatus();
+    Integer oldProgress = task.getProgress();
+
     boolean hasChildren = taskRepository.existsByParentId(task.getId());
     task.update(dto, newAssignee, newStatus, hasChildren);
 
-    // 상태 및 진행률 전파 로직
-    if (task.getStatus() == TaskStatus.DONE) {
-      propagateDownToChildren(task);
-    }
-    if (task.getParent() != null) {
-      calculateParentProgress(task.getParent());
-    }
+    // 상태/진행률 전파
+    taskStatusPropagator.propagateUpdates(task, oldStatus, oldProgress);
 
     taskRepository.saveAndFlush(task);
     projectRepository.updateLastModifiedDate(project.getId());
@@ -188,39 +187,13 @@ public class TaskService {
 
     // 삭제 후 부모 진행률 재계산
     if (parent != null) {
-      calculateParentProgress(parent);
+      taskStatusPropagator.updateParentProgress(parent);
     }
 
     projectRepository.updateLastModifiedDate(task.getProject().getId());
   }
 
   // --- Helper Methods ---
-
-  private void propagateDownToChildren(Task parent) {
-    List<Task> children = taskRepository.findAllByParentId(parent.getId());
-
-    for (Task child : children) {
-      child.forceDone(); // 상태 DONE, 진행률 100%
-      propagateDownToChildren(child); // 재귀 호출
-    }
-    taskRepository.saveAll(children);
-  }
-
-  private void calculateParentProgress(Task parent) {
-    List<Task> children = taskRepository.findAllByParentId(parent.getId());
-
-    if (children.isEmpty()) return;
-
-    double sum = children.stream().mapToInt(Task::getProgress).sum();
-    int avgProgress = (int) Math.round(sum / children.size());
-
-    parent.updateProgressFromChildren(avgProgress);
-    taskRepository.save(parent);
-
-    if (parent.getParent() != null) {
-      calculateParentProgress(parent.getParent());
-    }
-  }
 
   private LocalDate parseDate(String dateString) {
     if (dateString == null || dateString.isBlank()) {
